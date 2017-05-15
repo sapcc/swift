@@ -748,7 +748,7 @@ def _host_url_property():
         else:
             host = '%s:%s' % (self.environ['SERVER_NAME'],
                               self.environ['SERVER_PORT'])
-        scheme = self.environ.get('wsgi.url_scheme', 'http')
+        scheme = 'https'
         if scheme == 'http' and host.endswith(':80'):
             host, port = host.rsplit(':', 1)
         elif scheme == 'https' and host.endswith(':443'):
