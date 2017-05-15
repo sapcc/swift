@@ -128,6 +128,8 @@ class DomainRemapMiddleware(object):
             if path:
                 new_path_parts.append(path)
             new_path = '/'.join(new_path_parts)
+            if env['PATH_INFO'].endswith('/'):
+                new_path += '/'
             env['PATH_INFO'] = new_path
         return self.app(env, start_response)
 
