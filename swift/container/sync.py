@@ -544,6 +544,18 @@ class ContainerSync(Daemon):
                 for key in ('date', 'last-modified'):
                     if key in headers:
                         del headers[key]
+                # workaround for https://bugs.launchpad.net/swift/+bug/1605597
+                if 'X-Static-Large-Object' in headers:
+                    self.logger.warning("skipping SLO {}/{}".format(info['container'], row['name']))
+                    return True
+                # fix for https://bugs.launchpad.net/swift/+bug/1613681
+                # rewrite manifest referring to the same source container, to
+                # refer to the target container instead
+                if 'X-Object-Manifest' in headers:
+                    manifest_parts = headers['X-Object-Manifest'].split('/', 1)
+                    if manifest_parts[0] == info['container']:
+                        manifest_parts[0] = sync_to.rstrip('/').split('/')[-1]
+                        headers['X-Object-Manifest'] = '/'.join(manifest_parts)
                 if 'etag' in headers:
                     headers['etag'] = headers['etag'].strip('"')
                 if 'content-type' in headers:
