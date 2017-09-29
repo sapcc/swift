@@ -28,19 +28,27 @@ pip_install() {
 }
 pip_install pip
 pip_install setuptools wheel
-pip_install --no-compile -c /root/upper-constraints.txt /opt/swift/
+pip_install --no-compile -c /root/upper-constraints.txt \
+  /opt/swift/ \
+  keystonemiddleware \
+  python-keystoneclient \
+  python-swiftclient
 
 # if requested, install components required by the Helm chart at
 # https://github.com/sapcc/helm-charts/tree/master/openstack/swift
 if [ "${BUILD_MODE}" = sap ]; then
-    curl -L -o /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64
-    chmod +x /usr/bin/dumb-init
+  curl -L -o /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64
+  chmod +x /usr/bin/dumb-init
 
-    pip_install --no-compile \
-      -c /root/upper-constraints.txt \
-      git+https://github.com/sapcc/swift-account-caretaker.git \
-      git+https://github.com/sapcc/swift-health-statsd.git \
-      git+https://github.com/sapcc/swift-addons.git
+  pip_install --no-compile -c /root/upper-constraints.txt \
+    git+https://github.com/sapcc/swift-account-caretaker.git \
+    git+https://github.com/sapcc/swift-health-statsd.git \
+    git+https://github.com/sapcc/swift-addons.git
+
+  # apply keystonemiddleware patch
+  (
+    cd /opt/venv/lib/python2.7/site-packages && patch -p0
+  ) < /opt/swift/docker/keystonemiddleware-token-validation-interface.patch
 fi
 
 # cleanup
@@ -49,8 +57,3 @@ rm -rf /var/lib/apt/lists/*
 
 rm -rf /tmp/* /root/.cache
 find /usr/ /var/ -type f -name '*.pyc' -delete
-
-# TODO: upper-constraints.txt from github.com/{openstack,sapcc}/requirements
-# TODO: if SAP then dumb-init
-# TODO: if SAP then add swift-account-caretaker, swift-addons, swift-health-statsd
-# TODO: keystonemiddleware patch for endpoint_override

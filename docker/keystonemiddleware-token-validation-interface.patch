@@ -1,0 +1,19 @@
+--- keystonemiddleware/auth_token/__init__.py
++++ keystonemiddleware/auth_token/__init__.py
+@@ -1049,11 +1049,17 @@ class AuthProtocol(BaseAuthProtocol):
+
+         auth_plugin = self._get_auth_plugin()
+
++        try:
++            endpoint_override=self._conf_get('endpoint_override')
++        except cfg.NoSuchOptError:
++            endpoint_override = None
++
+         adap = adapter.Adapter(
+             sess,
+             auth=auth_plugin,
+             service_type='identity',
+             interface='admin',
++            endpoint_override=endpoint_override,
+             region_name=self._conf_get('region_name'),
+             connect_retries=self._conf_get('http_request_max_retries'))
