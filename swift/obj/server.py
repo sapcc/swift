@@ -250,7 +250,7 @@ class ObjectController(BaseStorageServer):
                     '%(ip)s:%(port)s/%(dev)s (saving for async update later)'),
                     {'ip': ip, 'port': port, 'dev': contdevice})
         else:
-            self.logger.error('ERROR container update is weird: ' + repr({'host':host,'partition':partition,'contdevice':contdevice}))
+            self.logger.warning('container update is weird: ' + repr({'host':host,'partition':partition,'contdevice':contdevice}))
         data = {'op': op, 'account': account, 'container': container,
                 'obj': obj, 'headers': headers_out}
         timestamp = headers_out.get('x-meta-timestamp',
