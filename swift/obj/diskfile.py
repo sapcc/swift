@@ -1017,7 +1017,23 @@ class BaseDiskFileManager(object):
                 if len(suff) == 3:
                     hashes.setdefault(suff, None)
             modified = True
-            self.logger.debug('Run listdir on %s', partition_path)
+            # Under certain circumstances the object replicator was stall,
+            # meaning not doing everything at all despite waiting for the
+            # eventlet hub (similar to
+            # https://bugs.launchpad.net/swift/+bug/1659712).
+            # We experienced that in our staging env after adding a new storage
+            # node into the rings.
+            # It only appears if running the object-replicator in
+            # LOG_LEVEL=DEBUG.
+            # strace did not bring any indications whats is wrong, as the issue
+            # does not materialize when strace is attached.
+            # Best guess: There is a certain timing or multi threading issue,
+            # which does not happen when strace is attached.
+            # The last log line, before the object-replicator stalls, was always
+            # this one. If that is commented, the replicator works as expected.
+            # So disabling it without further inspections is better
+            # than disabling DEBUG for object-replicator at all.
+            #self.logger.debug('Run listdir on %s', partition_path)
         hashes.update((suffix, None) for suffix in recalculate)
         for suffix, hash_ in hashes.items():
             if not hash_:
