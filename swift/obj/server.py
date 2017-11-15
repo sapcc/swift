@@ -313,6 +313,8 @@ class ObjectController(BaseStorageServer):
                     'ERROR container update failed with '
                     '%(ip)s:%(port)s/%(dev)s (saving for async update later)'),
                     {'ip': ip, 'port': port, 'dev': contdevice})
+        else:
+            self.logger.warning('container update is weird: ' + repr({'host':host,'partition':partition,'contdevice':contdevice}))
         data = {'op': op, 'account': account, 'container': container,
                 'obj': obj, 'headers': headers_out}
         if redirect_data:
