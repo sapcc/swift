@@ -26,15 +26,6 @@ export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 # unset all proxy settings
 unset http_proxy https_proxy no_proxy
 
-function start_application {
-    if [ "$DEBUG_CONTAINER" = "true" ]
-    then
-        tail -f /dev/null
-    else
-        _start_application
-    fi
-}
-
 # function to copy shared configuration
 mkdir -p /etc/swift
 function get_swift_configs {
@@ -173,4 +164,7 @@ function _start_application {
 }
 
 process_config
-start_application
+
+[ "$DEBUG_CONTAINER" = true ] && exec tail -f /dev/null
+
+_start_application

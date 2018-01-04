@@ -11,5 +11,7 @@ mkdir -p /swift-drive-state/service-startup-time
 MARKER="/swift-drive-state/service-startup-time/rsyncd"
 touch "${MARKER}"
 
+[ "$DEBUG_CONTAINER" = true ] && exec tail -f /dev/null
+
 bash /usr/bin/unmount-helper "${MARKER}" &
 /usr/bin/rsync --daemon --config=/swift-etc/rsyncd.conf --no-detach
