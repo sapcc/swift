@@ -166,5 +166,4 @@ function _start_application {
 process_config
 
 [ "$DEBUG_CONTAINER" = true ] && exec tail -f /dev/null
-
 _start_application

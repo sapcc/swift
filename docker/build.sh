@@ -51,7 +51,7 @@ if [ "${BUILD_MODE}" = sap ]; then
   ) < /opt/swift/docker/keystonemiddleware-token-validation-interface.patch
 
   # startup logic and unmount helper
-  cp -r /opt/swift/docker/bin/. /usr/bin/
+  install -D -m 0755 -t /usr/bin/ /opt/swift/docker/bin/*
 fi
 
 # cleanup
