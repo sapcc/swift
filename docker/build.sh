@@ -49,6 +49,9 @@ if [ "${BUILD_MODE}" = sap ]; then
   (
     cd /opt/venv/lib/python2.7/site-packages && patch -p0
   ) < /opt/swift/docker/keystonemiddleware-token-validation-interface.patch
+
+  # startup logic and unmount helper
+  cp -r /opt/swift/docker/bin/. /usr/bin/
 fi
 
 # cleanup
