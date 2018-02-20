@@ -1,14 +1,6 @@
 --- keystonemiddleware/auth_token/__init__.py
 +++ keystonemiddleware/auth_token/__init__.py
-@@ -225,6 +225,7 @@ from keystoneauth1 import loading
- from keystoneauth1.loading import session as session_loading
- from keystoneclient.common import cms
- from keystoneclient import exceptions as ksc_exceptions
-+from oslo_config import cfg
- from oslo_log import log as logging
- from oslo_serialization import jsonutils
- import webob.dec
-@@ -922,11 +923,17 @@ class AuthProtocol(BaseAuthProtocol):
+@@ -940,11 +940,17 @@ class AuthProtocol(BaseAuthProtocol):
          return session_loading.Session().load_from_options(**kwargs)
 
      def _create_identity_server(self):
