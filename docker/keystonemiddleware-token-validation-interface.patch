@@ -1,0 +1,27 @@
+--- keystonemiddleware/auth_token/__init__.py
++++ keystonemiddleware/auth_token/__init__.py
+@@ -225,6 +225,7 @@ from keystoneauth1 import loading
+ from keystoneauth1.loading import session as session_loading
+ from keystoneclient.common import cms
+ from keystoneclient import exceptions as ksc_exceptions
++from oslo_config import cfg
+ from oslo_log import log as logging
+ from oslo_serialization import jsonutils
+ import webob.dec
+@@ -922,11 +923,17 @@ class AuthProtocol(BaseAuthProtocol):
+         return session_loading.Session().load_from_options(**kwargs)
+
+     def _create_identity_server(self):
++        try:
++            endpoint_override=self._conf.get('endpoint_override')
++        except cfg.NoSuchOptError:
++            endpoint_override = None
++
+         adap = adapter.Adapter(
+             self._session,
+             auth=self._auth,
+             service_type='identity',
+             interface='admin',
++            endpoint_override=endpoint_override,
+             region_name=self._conf.get('region_name'),
+             connect_retries=self._conf.get('http_request_max_retries'))
