@@ -41,7 +41,7 @@ pip_install --no-compile -c /root/upper-constraints.txt \
 # if requested, install components required by the Helm chart at
 # https://github.com/sapcc/helm-charts/tree/master/openstack/swift
 if [ "${BUILD_MODE}" = sap ]; then
-  curl -L -o /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64
+  curl -L -o /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64
   chmod +x /usr/bin/dumb-init
 
   pip_install --no-compile -c /root/upper-constraints.txt \
