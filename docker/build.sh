@@ -15,9 +15,9 @@ install -d -m 0755 -o swift -g swift /etc/swift /var/log/swift /var/lib/swift /v
 
 # fetch upper-constraints.txt from openstack/requirements
 if [ "${BUILD_MODE}" = sap ]; then
-  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/queens-m3/upper-constraints.txt
+  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/rocky-m3/upper-constraints.txt
 else
-  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/queens/upper-constraints.txt
+  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/rocky/upper-constraints.txt
 fi
 
 # fetching origin to get an up to date tag list
