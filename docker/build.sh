@@ -35,6 +35,7 @@ pip_install setuptools wheel
 pip_install --no-compile -c /root/upper-constraints.txt \
   /opt/swift/ \
   keystonemiddleware \
+  python-memcached \
   python-keystoneclient \
   python-swiftclient
 
