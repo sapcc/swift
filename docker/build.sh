@@ -49,7 +49,7 @@ if [ "${BUILD_MODE}" = sap ]; then
     git+https://github.com/sapcc/swift-account-caretaker.git \
     git+https://github.com/sapcc/swift-health-statsd.git \
     git+https://github.com/sapcc/swift-addons.git \
-    git+https://github.com/sapcc/swift-sentry.git@dev \
+    git+https://github.com/sapcc/swift-sentry.git \
     git+https://github.com/sapcc/openstack-watcher-middleware.git@1.0.17
 
   # apply keystonemiddleware patch
