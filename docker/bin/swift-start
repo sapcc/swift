@@ -51,25 +51,24 @@ function get_swift_configs {
 function process_config {
     case "$COMPONENT_NAME" in
         proxy-server)
-            get_swift_configs proxy-server.conf dispersion.conf
+            get_swift_configs proxy-server.conf dispersion.conf internal-client.conf
             ;;
         account-caretaker-*)
-            get_swift_configs internal-client.conf
             ;;
         account-*)
-            get_swift_configs account-server.conf
+            get_swift_configs account-server.conf internal-client.conf
             ;;
         container-sync)
             get_swift_configs container-server.conf container-sync-internal-client.conf container-sync-realms.conf
             ;;
         container-*)
-            get_swift_configs container-server.conf
+            get_swift_configs container-server.conf internal-client.conf
             ;;
         object-expirer)
-            get_swift_configs object-expirer.conf
+            get_swift_configs object-expirer.conf internal-client.conf
             ;;
         object-*)
-            get_swift_configs object-server.conf
+            get_swift_configs object-server.conf internal-client.conf
             ;;
         health-statsd)
             get_swift_configs dispersion.conf
