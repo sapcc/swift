@@ -18,7 +18,65 @@ swift-recon-cron.py
 
 import sys
 
-from swift.cli.recon_cron import main
+from eventlet import Timeout
+
+from swift.common.utils import get_logger, dump_recon_cache, readconf, \
+    lock_path
+from swift.obj.diskfile import ASYNCDIR_BASE
+
+
+def get_async_count(device_dir, logger):
+    async_count = 0
+    for i in os.listdir(device_dir):
+        device = os.path.join(device_dir, i)
+        if not os.path.isdir(device):
+            continue
+        try:
+            for asyncdir in os.listdir(device):
+                # skip stuff like "accounts", "containers", etc.
+                if not (asyncdir == ASYNCDIR_BASE or
+                        asyncdir.startswith(ASYNCDIR_BASE + '-')):
+                    continue
+                async_pending = os.path.join(device, asyncdir)
+
+                if os.path.isdir(async_pending):
+                    for entry in os.listdir(async_pending):
+                        if os.path.isdir(os.path.join(async_pending, entry)):
+                            async_hdir = os.path.join(async_pending, entry)
+                            async_count += len(os.listdir(async_hdir))
+        except OSError as err:
+            # This usually happens when the drive is unmounted by
+            # swift-drive-autopilot because of a read error. In this case, it
+            # is okay to keep going and skip the broken drive since a broken
+            # drive is already reported by `swift-recon --unmounted`.
+            logger.error('Skipping %s because of read error: %s' % (device, str(err)))
+    return async_count
+
+
+def main():
+    try:
+        conf_path = sys.argv[1]
+    except Exception:
+        print("Usage: %s CONF_FILE" % sys.argv[0].split('/')[-1])
+        print("ex: swift-recon-cron /etc/swift/object-server.conf")
+        sys.exit(1)
+    conf = readconf(conf_path, 'filter:recon')
+    device_dir = conf.get('devices', '/srv/node')
+    recon_cache_path = conf.get('recon_cache_path', '/var/cache/swift')
+    recon_lock_path = conf.get('recon_lock_path', '/var/lock')
+    cache_file = os.path.join(recon_cache_path, "object.recon")
+    lock_dir = os.path.join(recon_lock_path, "swift-recon-object-cron")
+    conf['log_name'] = conf.get('log_name', 'recon-cron')
+    logger = get_logger(conf, log_route='recon-cron')
+    try:
+        with lock_path(lock_dir):
+            asyncs = get_async_count(device_dir, logger)
+            dump_recon_cache({'async_pending': asyncs}, cache_file, logger)
+    except (Exception, Timeout) as err:
+        msg = 'Exception during recon-cron while accessing devices'
+        logger.exception(msg)
+        print('%s: %s' % (msg, err))
+        sys.exit(1)
 
 if __name__ == '__main__':
     sys.exit(main())
