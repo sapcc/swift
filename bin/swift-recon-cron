@@ -32,18 +32,25 @@ def get_async_count(device_dir, logger):
         device = os.path.join(device_dir, i)
         if not os.path.isdir(device):
             continue
-        for asyncdir in os.listdir(device):
-            # skip stuff like "accounts", "containers", etc.
-            if not (asyncdir == ASYNCDIR_BASE or
-                    asyncdir.startswith(ASYNCDIR_BASE + '-')):
-                continue
-            async_pending = os.path.join(device, asyncdir)
+        try:
+            for asyncdir in os.listdir(device):
+                # skip stuff like "accounts", "containers", etc.
+                if not (asyncdir == ASYNCDIR_BASE or
+                        asyncdir.startswith(ASYNCDIR_BASE + '-')):
+                    continue
+                async_pending = os.path.join(device, asyncdir)
 
-            if os.path.isdir(async_pending):
-                for entry in os.listdir(async_pending):
-                    if os.path.isdir(os.path.join(async_pending, entry)):
-                        async_hdir = os.path.join(async_pending, entry)
-                        async_count += len(os.listdir(async_hdir))
+                if os.path.isdir(async_pending):
+                    for entry in os.listdir(async_pending):
+                        if os.path.isdir(os.path.join(async_pending, entry)):
+                            async_hdir = os.path.join(async_pending, entry)
+                            async_count += len(os.listdir(async_hdir))
+        except OSError as err:
+            # This usually happens when the drive is unmounted by
+            # swift-drive-autopilot because of a read error. In this case, it
+            # is okay to keep going and skip the broken drive since a broken
+            # drive is already reported by `swift-recon --unmounted`.
+            logger.error('Skipping %s because of read error: %s' % (device, str(err)))
     return async_count
 
 
