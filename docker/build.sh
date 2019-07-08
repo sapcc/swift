@@ -50,7 +50,8 @@ if [ "${BUILD_MODE}" = sap ]; then
     git+https://github.com/sapcc/swift-health-statsd.git \
     git+https://github.com/sapcc/swift-addons.git \
     git+https://github.com/sapcc/swift-sentry.git \
-    git+https://github.com/sapcc/openstack-watcher-middleware.git@1.0.30
+    git+https://github.com/sapcc/openstack-watcher-middleware.git@1.0.30 \
+    git+https://github.com/sapcc/openstack-rate-limit-middleware.git@1.0.3
 
   # apply keystonemiddleware patch
   (
