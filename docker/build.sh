@@ -53,10 +53,12 @@ if [ "${BUILD_MODE}" = sap ]; then
     git+https://github.com/sapcc/openstack-watcher-middleware.git@1.0.30 \
     git+https://github.com/sapcc/openstack-rate-limit-middleware.git@1.1.0
 
+  # https://github.com/openstack/keystonemiddleware/commit/f6037a3d50a80d8c2e0044c8f72d23dddb0d7203
+  # Introduces the option to specify the interface for keystone, no need to patch that anymore
   # apply keystonemiddleware patch
-  (
-    cd /opt/venv/lib/python2.7/site-packages && patch -p0
-  ) < /opt/swift/docker/keystonemiddleware-token-validation-interface.patch
+  #(
+  #  cd /opt/venv/lib/python2.7/site-packages && patch -p0
+  #) < /opt/swift/docker/keystonemiddleware-token-validation-interface.patch
 
   # startup logic and unmount helper
   install -D -m 0755 -t /usr/bin/ /opt/swift/docker/bin/*
