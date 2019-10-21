@@ -667,10 +667,12 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
         self.assertEqual(self._get_error_code(body), 'NoSuchBucket')
 
     def test_object_multipart_upload_complete(self):
+        content_md5 = base64.b64encode(hashlib.md5(xml).digest())
         req = Request.blank('/bucket/object?uploadId=X',
                             environ={'REQUEST_METHOD': 'POST'},
                             headers={'Authorization': 'AWS test:tester:hmac',
-                                     'Date': self.get_date_header(), },
+                                     'Date': self.get_date_header(),
+                                     'Content-MD5': content_md5, },
                             body=xml)
         status, headers, body = self.call_s3api(req)
         elem = fromstring(body, 'CompleteMultipartUploadResult')
@@ -1634,6 +1636,16 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
         _, _, headers = self.swift.calls_with_headers[-1]
         self.assertEqual(headers['X-Copy-From'], '/src_bucket/src_obj')
         self.assertEqual(headers['Content-Length'], '0')
+        # Some headers *need* to get cleared in case we're copying from
+        # another multipart upload
+        for header in (
+            'X-Object-Sysmeta-S3api-Etag',
+            'X-Object-Sysmeta-Slo-Etag',
+            'X-Object-Sysmeta-Slo-Size',
+            'X-Object-Sysmeta-Container-Update-Override-Etag',
+            'X-Object-Sysmeta-Swift3-Etag',
+        ):
+            self.assertEqual(headers[header], '')
 
     @s3acl(s3acl_only=True)
     def test_upload_part_copy_acl_with_owner_permission(self):

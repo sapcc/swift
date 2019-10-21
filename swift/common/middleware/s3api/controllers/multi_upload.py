@@ -73,7 +73,7 @@ from six.moves.urllib.parse import quote, urlparse
 from swift.common.middleware.s3api.controllers.base import Controller, \
     bucket_operation, object_operation, check_container_existence
 from swift.common.middleware.s3api.s3response import InvalidArgument, \
-    ErrorResponse, MalformedXML, \
+    ErrorResponse, MalformedXML, BadDigest, \
     InvalidPart, BucketAlreadyExists, EntityTooSmall, InvalidPartOrder, \
     InvalidRequest, HTTPOk, HTTPNoContent, NoSuchKey, NoSuchUpload, \
     NoSuchBucket, BucketAlreadyOwnedByYou
@@ -172,6 +172,15 @@ class PartController(Controller):
 
             req.headers['Range'] = rng
             del req.headers['X-Amz-Copy-Source-Range']
+        if 'X-Amz-Copy-Source' in req.headers:
+            # Clear some problematic headers that might be on the source
+            req.headers.update({
+                sysmeta_header('object', 'etag'): '',
+                'X-Object-Sysmeta-Swift3-Etag': '',  # for legacy data
+                'X-Object-Sysmeta-Slo-Etag': '',
+                'X-Object-Sysmeta-Slo-Size': '',
+                'X-Object-Sysmeta-Container-Update-Override-Etag': '',
+            })
         resp = req.get_response(self.app)
 
         if 'X-Amz-Copy-Source' in req.headers:
@@ -571,6 +580,15 @@ class UploadController(Controller):
             xml = req.xml(MAX_COMPLETE_UPLOAD_BODY_SIZE)
             if not xml:
                 raise InvalidRequest(msg='You must specify at least one part')
+            if 'content-md5' in req.headers:
+                # If an MD5 was provided, we need to verify it.
+                # Note that S3Request already took care of translating to ETag
+                if req.headers['etag'] != md5(xml).hexdigest():
+                    raise BadDigest(content_md5=req.headers['content-md5'])
+                # We're only interested in the body here, in the
+                # multipart-upload controller -- *don't* let it get
+                # plumbed down to the object-server
+                del req.headers['etag']
 
             complete_elem = fromstring(
                 xml, 'CompleteMultipartUpload', self.logger)
