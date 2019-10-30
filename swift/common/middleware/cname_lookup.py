@@ -27,6 +27,7 @@ maximum lookup depth. If a match is found, the environment's Host header is
 rewritten and the request is passed further down the WSGI chain.
 """
 
+import six
 from six.moves import range
 
 from swift import gettext_ as _
@@ -148,6 +149,19 @@ class CNAMELookupMiddleware(object):
                 if self.memcache:
                     memcache_key = ''.join(['cname-', a_domain])
                     found_domain = self.memcache.get(memcache_key)
+                    # Although the domain originally put to memcache is not
+                    # unicode, retrieving it from memcache returned a unicode
+                    # value, breaking the middleware chain down through
+                    # PATH_INFO, e.g. in domain remap middleware
+                    if six.PY2:
+                        if isinstance(found_domain, six.text_type):
+                            found_domain = found_domain.encode('utf-8')
+                    else:
+                        if isinstance(found_domain, six.binary_type):
+                            found_domain = found_domain.decode('latin1')
+                        else:
+                            # Check that the input is valid
+                            found_domain.encode('latin1')
                 if found_domain is None:
                     ttl, found_domain = lookup_cname(a_domain, self.resolver)
                     if self.memcache and ttl > 0:
