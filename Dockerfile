@@ -1,11 +1,10 @@
 # build syslog-stdout in a separate container
 FROM golang:1-alpine AS builder
-RUN apk add --no-cache git musl-dev gcc && \
-  git clone https://github.com/sapcc/syslog-stdout /go/src/github.com/sapcc/syslog-stdout && \
-  go build -ldflags '-s -w -linkmode external -extldflags -static' -o /usr/bin/syslog-stdout github.com/sapcc/syslog-stdout/src
-
-  git clone https://github.com/sapcc/swift-health-exporter /go/src/github.com/sapcc/swift-health-exporter && \
-  go build -mod=vendor -ldflags '-s -w' -o /usr/bin/swift-health-exporter github.com/sapcc/swift-health-exporter
+RUN apk add --no-cache git musl-dev gcc
+RUN git clone https://github.com/sapcc/syslog-stdout /go/src/github.com/sapcc/syslog-stdout && \
+    go build -ldflags '-s -w -linkmode external -extldflags -static' -o /usr/bin/syslog-stdout github.com/sapcc/syslog-stdout/src
+RUN git clone https://github.com/sapcc/swift-health-exporter /go/src/github.com/sapcc/swift-health-exporter && \
+    go build -mod=vendor -ldflags '-s -w' -o /usr/bin/swift-health-exporter github.com/sapcc/swift-health-exporter
 
 
 ################################################################################
