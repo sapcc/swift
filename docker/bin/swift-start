@@ -73,6 +73,9 @@ function process_config {
         health-statsd)
             get_swift_configs dispersion.conf
             ;;
+        health-exporter)
+            get_swift_configs dispersion.conf
+            ;;
         recon-cron)
             get_swift_configs object-server.conf
             ;;
@@ -153,6 +156,9 @@ function _start_application {
             #
             # --preserve-env is required to pass the LOG_LEVEL to swift-health-statsd.
             every 60 run_as_swift bash /usr/bin/health-statsd-wrap "${SWIFT_BIN_PATH}"
+            ;;
+        health-exporter)
+            /usr/bin/swift-health-exporter
             ;;
         recon-cron)
             start_rsyslog
