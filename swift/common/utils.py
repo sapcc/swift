@@ -45,6 +45,7 @@ from random import random, shuffle
 from contextlib import contextmanager, closing
 import ctypes
 import ctypes.util
+from copy import deepcopy
 from optparse import OptionParser
 
 from tempfile import gettempdir, mkstemp, NamedTemporaryFile
@@ -75,7 +76,7 @@ from six.moves import cPickle as pickle
 from six.moves.configparser import (ConfigParser, NoSectionError,
                                     NoOptionError, RawConfigParser)
 from six.moves import range, http_client
-from six.moves.urllib.parse import quote as _quote
+from six.moves.urllib.parse import quote as _quote, unquote
 from six.moves.urllib.parse import urlparse
 
 from swift import gettext_ as _
@@ -186,6 +187,10 @@ O_TMPFILE = getattr(os, 'O_TMPFILE', 0o20000000 | os.O_DIRECTORY)
 IPV6_RE = re.compile("^\[(?P<address>.*)\](:(?P<port>[0-9]+))?$")
 
 MD5_OF_EMPTY_STRING = 'd41d8cd98f00b204e9800998ecf8427e'
+RESERVED_BYTE = b'\x00'
+RESERVED_STR = u'\x00'
+RESERVED = '\x00'
+
 
 LOG_LINE_DEFAULT_FORMAT = '{remote_addr} - - [{time.d}/{time.b}/{time.Y}' \
                           ':{time.H}:{time.M}:{time.S} +0000] ' \
@@ -233,25 +238,26 @@ def validate_hash_conf():
 
         if six.PY3:
             # Use Latin1 to accept arbitrary bytes in the hash prefix/suffix
-            confs_read = hash_conf.read(SWIFT_CONF_FILE, encoding='latin1')
+            with open(SWIFT_CONF_FILE, encoding='latin1') as swift_conf_file:
+                hash_conf.readfp(swift_conf_file)
         else:
-            confs_read = hash_conf.read(SWIFT_CONF_FILE)
+            with open(SWIFT_CONF_FILE) as swift_conf_file:
+                hash_conf.readfp(swift_conf_file)
 
-        if confs_read:
-            try:
-                HASH_PATH_SUFFIX = hash_conf.get('swift-hash',
-                                                 'swift_hash_path_suffix')
-                if six.PY3:
-                    HASH_PATH_SUFFIX = HASH_PATH_SUFFIX.encode('latin1')
-            except (NoSectionError, NoOptionError):
-                pass
-            try:
-                HASH_PATH_PREFIX = hash_conf.get('swift-hash',
-                                                 'swift_hash_path_prefix')
-                if six.PY3:
-                    HASH_PATH_PREFIX = HASH_PATH_PREFIX.encode('latin1')
-            except (NoSectionError, NoOptionError):
-                pass
+        try:
+            HASH_PATH_SUFFIX = hash_conf.get('swift-hash',
+                                             'swift_hash_path_suffix')
+            if six.PY3:
+                HASH_PATH_SUFFIX = HASH_PATH_SUFFIX.encode('latin1')
+        except (NoSectionError, NoOptionError):
+            pass
+        try:
+            HASH_PATH_PREFIX = hash_conf.get('swift-hash',
+                                             'swift_hash_path_prefix')
+            if six.PY3:
+                HASH_PATH_PREFIX = HASH_PATH_PREFIX.encode('latin1')
+        except (NoSectionError, NoOptionError):
+            pass
 
         if not HASH_PATH_SUFFIX and not HASH_PATH_PREFIX:
             raise InvalidHashPathConfigError()
@@ -259,7 +265,7 @@ def validate_hash_conf():
 
 try:
     validate_hash_conf()
-except InvalidHashPathConfigError:
+except (InvalidHashPathConfigError, IOError):
     # could get monkey patched or lazy loaded
     pass
 
@@ -323,7 +329,7 @@ def get_swift_info(admin=False, disallowed_sections=None):
     :returns: dictionary of information about the swift cluster.
     """
     disallowed_sections = disallowed_sections or []
-    info = dict(_swift_info)
+    info = deepcopy(_swift_info)
     for section in disallowed_sections:
         key_to_pop = None
         sub_section_dict = info
@@ -974,14 +980,13 @@ class _LibcWrapper(object):
                 # spurious AttributeError.
                 func_handle = load_libc_function(
                     func_name, fail_if_missing=True)
+                self._func_handle = func_handle
             except AttributeError:
                 # We pass fail_if_missing=True to load_libc_function and
                 # then ignore the error. It's weird, but otherwise we have
                 # to check if self._func_handle is noop_libc_function, and
                 # that's even weirder.
                 pass
-            else:
-                self._func_handle = func_handle
             self._loaded = True
 
     @property
@@ -1226,7 +1231,7 @@ class Timestamp(object):
     compatible for normalized timestamps which do not include an offset.
     """
 
-    def __init__(self, timestamp, offset=0, delta=0):
+    def __init__(self, timestamp, offset=0, delta=0, check_bounds=True):
         """
         Create a new Timestamp.
 
@@ -1270,10 +1275,11 @@ class Timestamp(object):
                 raise ValueError(
                     'delta must be greater than %d' % (-1 * self.raw))
             self.timestamp = float(self.raw * PRECISION)
-        if self.timestamp < 0:
-            raise ValueError('timestamp cannot be negative')
-        if self.timestamp >= 10000000000:
-            raise ValueError('timestamp too large')
+        if check_bounds:
+            if self.timestamp < 0:
+                raise ValueError('timestamp cannot be negative')
+            if self.timestamp >= 10000000000:
+                raise ValueError('timestamp too large')
 
     @classmethod
     def now(cls, offset=0, delta=0):
@@ -1347,25 +1353,33 @@ class Timestamp(object):
         if other is None:
             return False
         if not isinstance(other, Timestamp):
-            other = Timestamp(other)
+            try:
+                other = Timestamp(other, check_bounds=False)
+            except ValueError:
+                return False
         return self.internal == other.internal
 
     def __ne__(self, other):
-        if other is None:
-            return True
-        if not isinstance(other, Timestamp):
-            other = Timestamp(other)
-        return self.internal != other.internal
+        return not (self == other)
 
     def __lt__(self, other):
         if other is None:
             return False
         if not isinstance(other, Timestamp):
-            other = Timestamp(other)
+            other = Timestamp(other, check_bounds=False)
+        if other.timestamp < 0:
+            return False
+        if other.timestamp >= 10000000000:
+            return True
         return self.internal < other.internal
 
     def __hash__(self):
         return hash(self.internal)
+
+    def __invert__(self):
+        if self.offset:
+            raise ValueError('Cannot invert timestamps with offsets')
+        return Timestamp((999999999999999 - self.raw) * PRECISION)
 
 
 def encode_timestamps(t1, t2=None, t3=None, explicit=False):
@@ -2452,7 +2466,7 @@ def get_hub():
         return None
 
 
-def drop_privileges(user, call_setsid=True):
+def drop_privileges(user):
     """
     Sets the userid/groupid of the current process, get session leader, etc.
 
@@ -2465,11 +2479,13 @@ def drop_privileges(user, call_setsid=True):
     os.setgid(user[3])
     os.setuid(user[2])
     os.environ['HOME'] = user[5]
-    if call_setsid:
-        try:
-            os.setsid()
-        except OSError:
-            pass
+
+
+def clean_up_daemon_hygiene():
+    try:
+        os.setsid()
+    except OSError:
+        pass
     os.chdir('/')   # in case you need to rmdir on where you started the daemon
     os.umask(0o22)  # ensure files are created with the correct privileges
 
@@ -5693,6 +5709,9 @@ def get_redirect_data(response):
     if 'Location' not in headers:
         return None
     location = urlparse(headers['Location']).path
+    if config_true_value(headers.get('X-Backend-Location-Is-Quoted',
+                                     'false')):
+        location = unquote(location)
     account, container, _junk = split_path(location, 2, 3, True)
     timestamp_val = headers.get('X-Backend-Redirect-Timestamp')
     try:

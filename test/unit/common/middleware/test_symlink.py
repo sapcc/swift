@@ -228,6 +228,36 @@ class TestSymlinkMiddleware(TestSymlinkMiddlewareBase):
         self.assertIn(('Content-Location', '/v1/a/c1/o'), headers)
         self.assertIn(b'does not exist', body)
 
+    def test_symlink_simple_put_error(self):
+        self.app.register('HEAD', '/v1/a/c1/o',
+                          swob.HTTPInternalServerError, {}, 'bad news')
+        req = Request.blank('/v1/a/c/symlink', method='PUT',
+                            headers={
+                                'X-Symlink-Target': 'c1/o',
+                                'X-Symlink-Target-Etag': 'not-tgt-etag',
+                            }, body='')
+        status, headers, body = self.call_sym(req)
+        self.assertEqual(status, '500 Internal Error')
+        # this is a PUT response; so if we have a content-length...
+        self.assertGreater(int(dict(headers)['Content-Length']), 0)
+        # ... we better have a body!
+        self.assertIn(b'Internal Error', body)
+
+    def test_symlink_simple_put_to_non_existing_object_override(self):
+        self.app.register('HEAD', '/v1/a/c1/o', swob.HTTPNotFound, {})
+        self.app.register('PUT', '/v1/a/c/symlink', swob.HTTPCreated, {})
+        req = Request.blank('/v1/a/c/symlink', method='PUT',
+                            headers={
+                                'X-Symlink-Target': 'c1/o',
+                                'X-Symlink-Target-Etag': 'some-tgt-etag',
+                                # this header isn't normally sent with PUT
+                                'X-Symlink-Target-Bytes': '13',
+                            }, body='')
+        # this can be set in container_sync
+        req.environ['swift.symlink_override'] = True
+        status, headers, body = self.call_sym(req)
+        self.assertEqual(status, '201 Created')
+
     def test_symlink_put_with_prevalidated_etag(self):
         self.app.register('PUT', '/v1/a/c/symlink', swob.HTTPCreated, {})
         req = Request.blank('/v1/a/c/symlink', method='PUT', headers={
@@ -381,6 +411,8 @@ class TestSymlinkMiddleware(TestSymlinkMiddlewareBase):
         self.assertIn(('Content-Location', '/v1/a2/c1/o'), headers)
         calls = self.app.calls_with_headers
         req_headers['Host'] = 'localhost:80'
+        req_headers['X-Backend-Ignore-Range-If-Metadata-Present'] = \
+            'x-object-sysmeta-symlink-target'
         self.assertEqual(req_headers, calls[0].headers)
         req_headers['User-Agent'] = 'Swift'
         self.assertEqual(req_headers, calls[1].headers)
@@ -549,6 +581,8 @@ class TestSymlinkMiddleware(TestSymlinkMiddlewareBase):
         self.assertIn(('Content-Location', '/v1/a2/c1/o'), headers)
         calls = self.app.calls_with_headers
         req_headers['Host'] = 'localhost:80'
+        req_headers['X-Backend-Ignore-Range-If-Metadata-Present'] = \
+            'x-object-sysmeta-symlink-target'
         self.assertEqual(req_headers, calls[0].headers)
         req_headers['User-Agent'] = 'Swift'
         self.assertEqual(req_headers, calls[1].headers)

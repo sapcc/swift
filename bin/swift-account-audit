@@ -108,7 +108,6 @@ class Auditor(object):
                         consistent = False
                         print('  MD5 does not match etag for "%s" on %s/%s'
                               % (path, node['ip'], node['device']))
-                    etags.append((resp.getheader('ETag'), node))
                 else:
                     conn = http_connect(node['ip'], node['port'],
                                         node['device'], part, 'HEAD',
@@ -120,6 +119,12 @@ class Auditor(object):
                         print('  Bad status HEADing object "%s" on %s/%s'
                               % (path, node['ip'], node['device']))
                         continue
+
+                override_etag = resp.getheader(
+                    'X-Object-Sysmeta-Container-Update-Override-Etag')
+                if override_etag:
+                    etags.append((override_etag, node))
+                else:
                     etags.append((resp.getheader('ETag'), node))
             except Exception:
                 self.object_exceptions += 1
@@ -252,14 +257,14 @@ class Auditor(object):
                         self.account_not_found += 1
                         consistent = False
                         print("  Bad status GETting account '%s' "
-                              " from %ss:%ss" %
+                              " from %s:%s" %
                               (account, node['ip'], node['device']))
                         break
                     results = json.loads(resp.read())
                 except Exception:
                     self.account_exceptions += 1
                     consistent = False
-                    print("  Exception GETting account '%s' on %ss:%ss" %
+                    print("  Exception GETting account '%s' on %s:%s" %
                           (account, node['ip'], node['device']))
                     break
                 if node_id not in responses:

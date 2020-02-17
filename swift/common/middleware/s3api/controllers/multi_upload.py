@@ -60,6 +60,7 @@ Static Large Object when the multipart upload is completed.
 """
 
 import binascii
+import copy
 from hashlib import md5
 import os
 import re
@@ -67,7 +68,7 @@ import time
 
 import six
 
-from swift.common.swob import Range, bytes_to_wsgi
+from swift.common.swob import Range, bytes_to_wsgi, normalize_etag
 from swift.common.utils import json, public, reiterate
 from swift.common.db import utf8encode
 from swift.common.request_helpers import get_container_update_override_key
@@ -86,6 +87,7 @@ from swift.common.middleware.s3api.utils import unique_id, \
     MULTIUPLOAD_SUFFIX, S3Timestamp, sysmeta_header
 from swift.common.middleware.s3api.etree import Element, SubElement, \
     fromstring, tostring, XMLSyntaxError, DocumentInvalid
+from swift.common.storage_policy import POLICIES
 
 DEFAULT_MAX_PARTS_LISTING = 1000
 DEFAULT_MAX_UPLOADS = 1000
@@ -98,10 +100,19 @@ def _get_upload_info(req, app, upload_id):
     container = req.container_name + MULTIUPLOAD_SUFFIX
     obj = '%s/%s' % (req.object_name, upload_id)
 
+    # XXX: if we leave the copy-source header, somewhere later we might
+    # drop in a ?version-id=... query string that's utterly inappropriate
+    # for the upload marker. Until we get around to fixing that, just pop
+    # it off for now...
+    copy_source = req.headers.pop('X-Amz-Copy-Source', None)
     try:
         return req.get_response(app, 'HEAD', container=container, obj=obj)
     except NoSuchKey:
         raise NoSuchUpload(upload_id=upload_id)
+    finally:
+        # ...making sure to restore any copy-source before returning
+        if copy_source is not None:
+            req.headers['X-Amz-Copy-Source'] = copy_source
 
 
 def _check_upload_info(req, app, upload_id):
@@ -364,8 +375,7 @@ class UploadsController(Controller):
         # Create a unique S3 upload id from UUID to avoid duplicates.
         upload_id = unique_id()
 
-        orig_container = req.container_name
-        seg_container = orig_container + MULTIUPLOAD_SUFFIX
+        seg_container = req.container_name + MULTIUPLOAD_SUFFIX
         content_type = req.headers.get('Content-Type')
         if content_type:
             req.headers[sysmeta_header('object', 'has-content-type')] = 'yes'
@@ -376,15 +386,21 @@ class UploadsController(Controller):
         req.headers['Content-Type'] = 'application/directory'
 
         try:
-            req.container_name = seg_container
-            req.get_container_info(self.app)
+            seg_req = copy.copy(req)
+            seg_req.environ = copy.copy(req.environ)
+            seg_req.container_name = seg_container
+            seg_req.get_container_info(self.app)
         except NoSuchBucket:
             try:
-                req.get_response(self.app, 'PUT', seg_container, '')
+                # multi-upload bucket doesn't exist, create one with
+                # same storage policy as the primary bucket
+                info = req.get_container_info(self.app)
+                policy_name = POLICIES[info['storage_policy']].name
+                hdrs = {'X-Storage-Policy': policy_name}
+                seg_req.get_response(self.app, 'PUT', seg_container, '',
+                                     headers=hdrs)
             except (BucketAlreadyExists, BucketAlreadyOwnedByYou):
                 pass
-        finally:
-            req.container_name = orig_container
 
         obj = '%s/%s' % (req.object_name, upload_id)
 
@@ -543,10 +559,15 @@ class UploadController(Controller):
 
         #  Iterate over the segment objects and delete them individually
         objects = json.loads(resp.body)
-        for o in objects:
-            container = req.container_name + MULTIUPLOAD_SUFFIX
-            obj = bytes_to_wsgi(o['name'].encode('utf-8'))
-            req.get_response(self.app, container=container, obj=obj)
+        while objects:
+            for o in objects:
+                container = req.container_name + MULTIUPLOAD_SUFFIX
+                obj = bytes_to_wsgi(o['name'].encode('utf-8'))
+                req.get_response(self.app, container=container, obj=obj)
+            query['marker'] = objects[-1]['name']
+            resp = req.get_response(self.app, 'GET', container, '',
+                                    query=query)
+            objects = json.loads(resp.body)
 
         return HTTPNoContent()
 
@@ -608,10 +629,7 @@ class UploadController(Controller):
                     raise InvalidPartOrder(upload_id=upload_id)
                 previous_number = part_number
 
-                etag = part_elem.find('./ETag').text
-                if len(etag) >= 2 and etag[0] == '"' and etag[-1] == '"':
-                    # strip double quotes
-                    etag = etag[1:-1]
+                etag = normalize_etag(part_elem.find('./ETag').text)
                 if len(etag) != 32 or any(c not in '0123456789abcdef'
                                           for c in etag):
                     raise InvalidPart(upload_id=upload_id,

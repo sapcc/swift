@@ -20,13 +20,13 @@ from mock import patch
 import os
 import time
 import unittest
-from six.moves.urllib.parse import quote
+from six.moves.urllib.parse import quote, quote_plus
 
 from swift.common import swob
 from swift.common.swob import Request
 from swift.common.utils import json
 
-from test.unit import FakeMemcache
+from test.unit import FakeMemcache, patch_policies
 from test.unit.common.middleware.s3api import S3ApiTestCase
 from test.unit.common.middleware.s3api.helpers import UnreadableInput
 from swift.common.middleware.s3api.etree import fromstring, tostring
@@ -36,6 +36,7 @@ from test.unit.common.middleware.s3api.test_s3_acl import s3acl
 from swift.common.middleware.s3api.utils import sysmeta_header, mktime, \
     S3Timestamp
 from swift.common.middleware.s3api.s3request import MAX_32BIT_INT
+from swift.common.storage_policy import StoragePolicy
 from swift.proxy.controllers.base import get_cache_key
 
 XML = '<CompleteMultipartUpload>' \
@@ -89,12 +90,25 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
         objects = [{'name': item[0], 'last_modified': item[1],
                     'hash': item[2], 'bytes': item[3]}
                    for item in OBJECTS_TEMPLATE]
-        object_list = json.dumps(objects)
 
         self.swift.register('PUT', segment_bucket,
                             swob.HTTPAccepted, {}, None)
+        # default to just returning everybody...
         self.swift.register('GET', segment_bucket, swob.HTTPOk, {},
-                            object_list)
+                            json.dumps(objects))
+        # but for the listing when aborting an upload, break it up into pages
+        self.swift.register(
+            'GET', '%s?delimiter=/&format=json&prefix=object/X/' % (
+                segment_bucket, ),
+            swob.HTTPOk, {}, json.dumps(objects[:1]))
+        self.swift.register(
+            'GET', '%s?delimiter=/&format=json&marker=%s&prefix=object/X/' % (
+                segment_bucket, objects[0]['name']),
+            swob.HTTPOk, {}, json.dumps(objects[1:]))
+        self.swift.register(
+            'GET', '%s?delimiter=/&format=json&marker=%s&prefix=object/X/' % (
+                segment_bucket, objects[-1]['name']),
+            swob.HTTPOk, {}, '[]')
         self.swift.register('HEAD', segment_bucket + '/object/X',
                             swob.HTTPOk,
                             {'x-object-meta-foo': 'bar',
@@ -237,7 +251,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
 
     @s3acl
     @patch('swift.common.middleware.s3api.s3request.get_container_info',
-           lambda x, y: {'status': 404})
+           lambda env, app, swift_source: {'status': 404})
     def test_bucket_multipart_uploads_GET_without_bucket(self):
         self.swift.register('HEAD', '/v1/AUTH_test/bucket',
                             swob.HTTPNotFound, {}, '')
@@ -332,7 +346,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
             query[key] = arg
         self.assertEqual(query['format'], 'json')
         self.assertEqual(query['limit'], '1001')
-        self.assertEqual(query['marker'], 'object/Y')
+        self.assertEqual(query['marker'], quote_plus('object/Y'))
 
     @s3acl
     def test_bucket_multipart_uploads_GET_with_key_marker(self):
@@ -366,7 +380,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
             query[key] = arg
         self.assertEqual(query['format'], 'json')
         self.assertEqual(query['limit'], '1001')
-        self.assertEqual(query['marker'], quote('object/~'))
+        self.assertEqual(query['marker'], quote_plus('object/~'))
 
     @s3acl
     def test_bucket_multipart_uploads_GET_with_prefix(self):
@@ -536,13 +550,14 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
             query[key] = arg
         self.assertEqual(query['format'], 'json')
         self.assertEqual(query['limit'], '1001')
-        self.assertEqual(query['prefix'], 'dir/')
+        self.assertEqual(query['prefix'], quote_plus('dir/'))
         self.assertTrue(query.get('delimiter') is None)
 
     @patch('swift.common.middleware.s3api.controllers.'
            'multi_upload.unique_id', lambda: 'X')
     def _test_object_multipart_upload_initiate(self, headers, cache=None,
-                                               bucket_exists=True):
+                                               bucket_exists=True,
+                                               expected_policy=None):
         headers.update({
             'Authorization': 'AWS test:tester:hmac',
             'Date': self.get_date_header(),
@@ -571,6 +586,10 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
                 ('PUT', '/v1/AUTH_test/bucket+segments'),
                 ('PUT', '/v1/AUTH_test/bucket+segments/object/X'),
             ], self.swift.calls)
+            if expected_policy:
+                _, _, req_headers = self.swift.calls_with_headers[-2]
+                self.assertEqual(req_headers.get('X-Storage-Policy'),
+                                 expected_policy)
         self.swift.clear_calls()
 
     def test_object_multipart_upload_initiate_with_segment_bucket(self):
@@ -589,6 +608,8 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
                             swob.HTTPCreated, {}, None)
         fake_memcache = FakeMemcache()
         fake_memcache.store[get_cache_key(
+            'AUTH_test', 'bucket')] = {'status': 204}
+        fake_memcache.store[get_cache_key(
             'AUTH_test', 'bucket+segments')] = {'status': 404}
         self._test_object_multipart_upload_initiate({}, fake_memcache,
                                                     bucket_exists=False)
@@ -599,6 +620,33 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
             {'Content-MD5': base64.b64encode(b'blahblahblahblah').strip()},
             fake_memcache,
             bucket_exists=False)
+
+    @patch_policies([
+        StoragePolicy(0, 'gold', is_default=True),
+        StoragePolicy(1, 'silver')])
+    def test_object_mpu_initiate_without_segment_bucket_same_container(self):
+        self.swift.register('PUT', '/v1/AUTH_test/bucket+segments',
+                            swob.HTTPCreated,
+                            {'X-Storage-Policy': 'silver'}, None)
+        fake_memcache = FakeMemcache()
+        fake_memcache.store[get_cache_key(
+            'AUTH_test', 'bucket')] = {'status': 204,
+                                       'storage_policy': '1'}
+        fake_memcache.store[get_cache_key(
+            'AUTH_test', 'bucket+segments')] = {'status': 404}
+        self.s3api.conf.derived_container_policy_use_default = False
+        self._test_object_multipart_upload_initiate({}, fake_memcache,
+                                                    bucket_exists=False,
+                                                    expected_policy='silver')
+        self._test_object_multipart_upload_initiate({'Etag': 'blahblahblah'},
+                                                    fake_memcache,
+                                                    bucket_exists=False,
+                                                    expected_policy='silver')
+        self._test_object_multipart_upload_initiate(
+            {'Content-MD5': base64.b64encode(b'blahblahblahblah').strip()},
+            fake_memcache,
+            bucket_exists=False,
+            expected_policy='silver')
 
     @patch('swift.common.middleware.s3api.controllers.multi_upload.'
            'unique_id', lambda: 'X')
@@ -736,7 +784,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
                             body=XML)
         with patch(
                 'swift.common.middleware.s3api.s3request.get_container_info',
-                lambda x, y: {'status': 404}):
+                lambda env, app, swift_source: {'status': 404}):
             self.swift.register('HEAD', '/v1/AUTH_test/nobucket',
                                 swob.HTTPNotFound, {}, None)
             status, headers, body = self.call_s3api(req)
@@ -1256,7 +1304,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
                                      'Date': self.get_date_header()})
         with patch(
                 'swift.common.middleware.s3api.s3request.get_container_info',
-                lambda x, y: {'status': 404}):
+                lambda env, app, swift_source: {'status': 404}):
             self.swift.register('HEAD', '/v1/AUTH_test/nobucket',
                                 swob.HTTPNotFound, {}, None)
             status, headers, body = self.call_s3api(req)
@@ -1272,8 +1320,8 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
         self.assertEqual(status.split()[0], '204')
 
     @s3acl
-    @patch('swift.common.middleware.s3api.s3request.'
-           'get_container_info', lambda x, y: {'status': 204})
+    @patch('swift.common.middleware.s3api.s3request.get_container_info',
+           lambda env, app, swift_source: {'status': 204})
     def test_object_upload_part_error(self):
         # without upload id
         req = Request.blank('/bucket/object?partNumber=1',
@@ -1319,7 +1367,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
                             body='part object')
         with patch(
                 'swift.common.middleware.s3api.s3request.get_container_info',
-                lambda x, y: {'status': 404}):
+                lambda env, app, swift_source: {'status': 404}):
             self.swift.register('HEAD', '/v1/AUTH_test/nobucket',
                                 swob.HTTPNotFound, {}, None)
             status, headers, body = self.call_s3api(req)
@@ -1351,7 +1399,7 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
                                      'Date': self.get_date_header()})
         with patch(
                 'swift.common.middleware.s3api.s3request.get_container_info',
-                lambda x, y: {'status': 404}):
+                lambda env, app, swift_source: {'status': 404}):
             self.swift.register('HEAD', '/v1/AUTH_test/nobucket',
                                 swob.HTTPNotFound, {}, None)
             status, headers, body = self.call_s3api(req)
@@ -1660,6 +1708,13 @@ class TestS3ApiMultiUpload(S3ApiTestCase):
         status, headers, body = \
             self._test_for_s3acl('DELETE', '?uploadId=X', 'test:full_control')
         self.assertEqual(status.split()[0], '204')
+        self.assertEqual([
+            path for method, path in self.swift.calls if method == 'DELETE'
+        ], [
+            '/v1/AUTH_test/bucket+segments/object/X',
+            '/v1/AUTH_test/bucket+segments/object/X/1',
+            '/v1/AUTH_test/bucket+segments/object/X/2',
+        ])
 
     @s3acl(s3acl_only=True)
     def test_complete_multipart_upload_acl_without_permission(self):
