@@ -158,7 +158,8 @@ function _start_application {
             every 60 run_as_swift bash /usr/bin/health-statsd-wrap "${SWIFT_BIN_PATH}"
             ;;
         health-exporter)
-            /usr/bin/swift-health-exporter
+            shift
+            /usr/bin/swift-health-exporter "$@"
             ;;
         recon-cron)
             start_rsyslog
@@ -172,4 +173,4 @@ function _start_application {
 process_config
 
 [ "$DEBUG_CONTAINER" = true ] && exec tail -f /dev/null
-_start_application
+_start_application "$@"
