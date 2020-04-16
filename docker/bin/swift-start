@@ -70,9 +70,6 @@ function process_config {
         object-*)
             get_swift_configs object-server.conf internal-client.conf
             ;;
-        health-statsd)
-            get_swift_configs dispersion.conf
-            ;;
         health-exporter)
             get_swift_configs dispersion.conf
             ;;
@@ -148,14 +145,6 @@ function _start_application {
             start_rsyslog
             bash /usr/bin/unmount-helper "${MARKER}" &
             run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/object-server.conf
-            ;;
-        health-statsd)
-            # Data is usually collected once a minute, but if there is a problem and
-            # collection takes a long time, we can easily see that by sparse data
-            # points in Grafana, or by "UNDETERMINED" alerts in Monasca.
-            #
-            # --preserve-env is required to pass the LOG_LEVEL to swift-health-statsd.
-            every 60 run_as_swift bash /usr/bin/health-statsd-wrap "${SWIFT_BIN_PATH}"
             ;;
         health-exporter)
             shift
