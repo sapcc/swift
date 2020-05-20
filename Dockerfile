@@ -1,76 +1,23 @@
-################################################
-#
-#  Alpine 3.10.1 Swift-All-In-One
-#
-################################################
-
-FROM        alpine:3.10.1
-MAINTAINER  Openstack Swift
-
-ENV	        S6_LOGGING 1
-ENV	        S6_VERSION 1.21.4.0
-ENV         SOCKLOG_VERSION 3.0.1-1
-ENV	        ARCH amd64
-ENV         BUILD_DIR "/tmp"
-ENV         ENV="/etc/profile"
-
-#COPY        docker/install_scripts /install_scripts
-COPY        . /opt/swift
-
-ADD	        https://github.com/just-containers/s6-overlay/releases/download/v$S6_VERSION/s6-overlay-$ARCH.tar.gz /tmp/
-ADD	        https://github.com/just-containers/s6-overlay/releases/download/v$S6_VERSION/s6-overlay-$ARCH.tar.gz.sig /tmp/
-ADD         https://github.com/just-containers/socklog-overlay/releases/download/v$SOCKLOG_VERSION/socklog-overlay-$ARCH.tar.gz /tmp/
-
-RUN         mkdir /etc/swift && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   starting swift_needs  ===================" && \
-            /opt/swift/docker/install_scripts/00_swift_needs.sh && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   starting apk_install_prereqs  ===================" && \
-            /opt/swift/docker/install_scripts/10_apk_install_prereqs.sh && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   starting apk_install_py2  ===================" && \
-            /opt/swift/docker/install_scripts/20_apk_install_py2.sh && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   starting swift_install  ===================" && \
-            /opt/swift/docker/install_scripts/50_swift_install.sh && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   installing s6-overlay  ===================" && \
-            curl https://keybase.io/justcontainers/key.asc | gpg --import && \
-            gpg --verify /tmp/s6-overlay-$ARCH.tar.gz.sig /tmp/s6-overlay-$ARCH.tar.gz && \
-            gunzip -c /tmp/s6-overlay-$ARCH.tar.gz | tar -xf - -C / && \
-            gunzip -c /tmp/socklog-overlay-amd64.tar.gz | tar -xf - -C / && \
-            rm -rf /tmp/s6-overlay*  && \
-            rm -rf /tmp/socklog-overlay* && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   starting pip_uninstall_dev  ===================" && \
-            /opt/swift/docker/install_scripts/60_pip_uninstall_dev.sh && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================   starting apk_uninstall_dev  ===================" && \
-            /opt/swift/docker/install_scripts/99_apk_uninstall_dev.sh && \
-            echo && \
-            echo && \
-            echo && \
-            echo "================ clean up  ===================" && \
-            echo "TODO: cleanup"
-            #rm -rf /opt/swift
+# build syslog-stdout in a separate container
+FROM golang:1-alpine AS builder
+RUN apk add --no-cache git musl-dev gcc make
+RUN git clone https://github.com/sapcc/syslog-stdout && \
+    make -C ./syslog-stdout install PREFIX=/pkg GO_LDFLAGS='-s -w -linkmode external -extldflags -static'
+RUN git clone https://github.com/sapcc/swift-health-exporter && \
+    make -C ./swift-health-exporter install PREFIX=/pkg GO_LDFLAGS='-s -w -linkmode external -extldflags -static' GO_BUILDFLAGS='-mod vendor'
 
 
-# Add Swift required configuration files
-COPY         docker/rootfs /
+################################################################################
 
-ENTRYPOINT	["/init"]
+FROM debian:stretch-slim
+
+ENV PATH=/opt/venv/bin:$PATH
+
+COPY --from=builder /pkg/bin/* /usr/bin/
+COPY . /opt/swift
+
+# give --build-arg BUILD_MODE=sap to install components required by required by
+# the Helm chart at https://github.com/sapcc/helm-charts/tree/master/openstack/swift
+ARG BUILD_MODE=normal
+
+RUN /opt/swift/docker/build.sh
