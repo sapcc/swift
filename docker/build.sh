@@ -37,7 +37,8 @@ pip_install --no-compile -c /root/upper-constraints.txt \
   keystonemiddleware \
   python-memcached \
   python-keystoneclient \
-  python-swiftclient
+  python-swiftclient \
+  pyOpenSSL
 
 # if requested, install components required by the Helm chart at
 # https://github.com/sapcc/helm-charts/tree/master/openstack/swift
