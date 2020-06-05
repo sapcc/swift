@@ -47,7 +47,7 @@ if [ "${BUILD_MODE}" = sap ]; then
   chmod +x /usr/bin/dumb-init
 
   pip_install --no-compile -c /root/upper-constraints.txt \
-    git+https://github.com/sapcc/swift-account-caretaker.git@py3 \
+    git+https://github.com/sapcc/swift-account-caretaker.git \
     git+https://github.com/sapcc/swift-addons.git \
     git+https://github.com/sapcc/swift-sentry.git \
     git+https://github.com/sapcc/openstack-watcher-middleware.git@1.0.30 \
