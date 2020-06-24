@@ -4,7 +4,7 @@ set -euxo pipefail
 # install dependencies
 apt-get update
 apt-get dist-upgrade -y
-DEPENDS="netbase ca-certificates curl python3 sudo rsync gettext liberasurecode1 libffi6 libssl1.1 netcat procps lsof iproute2"
+DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi6 libssl1.1 netcat procps lsof iproute2"
 MAKEDEPENDS="git build-essential python3-venv python3-dev liberasurecode-dev libffi-dev libssl-dev"
 apt-get install -y --no-install-recommends ${DEPENDS} ${MAKEDEPENDS}
 
@@ -25,7 +25,7 @@ fi
 git -C /opt/swift fetch origin
 
 # setup virtualenv and install Swift there
-python3 -m venv /opt/venv/
+python3.6 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
