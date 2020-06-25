@@ -9,7 +9,7 @@ RUN git clone https://github.com/sapcc/swift-health-exporter && \
 
 ################################################################################
 
-FROM debian:stretch-slim
+FROM python:3.6-slim-buster
 
 ENV PATH=/opt/venv/bin:$PATH
 

@@ -4,8 +4,8 @@ set -euxo pipefail
 # install dependencies
 apt-get update
 apt-get dist-upgrade -y
-DEPENDS="netbase ca-certificates curl python virtualenv sudo rsync gettext liberasurecode1 libffi6 libssl1.1 netcat procps lsof iproute2"
-MAKEDEPENDS="git virtualenv build-essential python-dev liberasurecode-dev libffi-dev libssl-dev"
+DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi6 libssl1.1 netcat procps lsof iproute2"
+MAKEDEPENDS="git build-essential python3-venv python3-dev liberasurecode-dev libffi-dev libssl-dev"
 apt-get install -y --no-install-recommends ${DEPENDS} ${MAKEDEPENDS}
 
 # create service user
@@ -25,7 +25,7 @@ fi
 git -C /opt/swift fetch origin
 
 # setup virtualenv and install Swift there
-virtualenv --system-site-packages /opt/venv/
+python3.6 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
@@ -37,7 +37,8 @@ pip_install --no-compile -c /root/upper-constraints.txt \
   keystonemiddleware \
   python-memcached \
   python-keystoneclient \
-  python-swiftclient
+  python-swiftclient \
+  pyOpenSSL
 
 # if requested, install components required by the Helm chart at
 # https://github.com/sapcc/helm-charts/tree/master/openstack/swift
