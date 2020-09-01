@@ -10,6 +10,7 @@ RUN git clone https://github.com/sapcc/swift-health-exporter && \
 ################################################################################
 
 FROM python:3.6-slim-buster
+LABEL source_repository="https://github.com/sapcc/swift"
 
 ENV PATH=/opt/venv/bin:$PATH
 
