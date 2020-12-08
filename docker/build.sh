@@ -30,7 +30,7 @@ set +ux; source /opt/venv/bin/activate; set -ux
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
 }
-pip_install pip
+pip_install "pip<20.3"
 pip_install setuptools wheel
 pip_install --no-compile -c /root/upper-constraints.txt \
   /opt/swift/ \
