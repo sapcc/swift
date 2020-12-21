@@ -26,6 +26,13 @@ export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 # unset all proxy settings
 unset http_proxy https_proxy no_proxy
 
+# Function for replacing the special fromEnv password syntax with the actual
+# password from the exported environment variable.
+# Acceptable value: { fromEnv: ENV_VAR }
+function get_passwords_from_env {
+	perl -npE 's/{\s*fromEnv:\s*(\w+)\s*}/$ENV{$1}/' -i "${1}"
+}
+
 # function to copy shared configuration
 mkdir -p /etc/swift
 function get_swift_configs {
@@ -37,6 +44,7 @@ function get_swift_configs {
           src=/swift-etc-cluster
         fi
         cp ${src}/${file} /etc/swift
+        get_passwords_from_env /etc/swift/${file}
         chown swift:swift /etc/swift/${file}
     done
 
