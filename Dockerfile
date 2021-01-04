@@ -1,11 +1,12 @@
 # build syslog-stdout in a separate container
-FROM golang:1-alpine AS builder
+FROM golang:1.15-alpine AS builder
 RUN apk add --no-cache git musl-dev gcc make
 RUN git clone https://github.com/sapcc/syslog-stdout && \
     make -C ./syslog-stdout install PREFIX=/pkg GO_LDFLAGS='-s -w -linkmode external -extldflags -static'
 RUN git clone https://github.com/sapcc/swift-health-exporter && \
     make -C ./swift-health-exporter install PREFIX=/pkg GO_LDFLAGS='-s -w -linkmode external -extldflags -static' GO_BUILDFLAGS='-mod vendor'
-
+RUN git clone https://github.com/sapcc/swift-s3-cache-prewarmer && \
+    make -C ./swift-s3-cache-prewarmer install PREFIX=/pkg GO_LDFLAGS='-linkmode external -extldflags -static'
 
 ################################################################################
 
