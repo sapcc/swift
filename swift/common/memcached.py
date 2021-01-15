@@ -211,6 +211,14 @@ class MemcacheRing(object):
             # We need to return something to the pool
             # A new connection will be created the next time it is retrieved
             self._return_conn(server, None, None)
+
+        ### error limiting disabled in SAPCC because we only have one memcached
+        ### server and there is nothing to be gained from disabling it
+        ### (this patch will become unnecessary because Wallaby includes
+        ### <https://github.com/openstack/swift/commit/aff65242ff87b24d43d7a6ce2b1c33546363144b>
+        ### which makes this behavior accessible by config option)
+        return
+
         now = time.time()
         self._errors[server].append(time.time())
         if len(self._errors[server]) > ERROR_LIMIT_COUNT:
