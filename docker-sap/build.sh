@@ -16,7 +16,6 @@ install -d -m 0755 -o swift -g swift /etc/swift /var/log/swift /var/lib/swift /v
 # fetch upper-constraints.txt from openstack/requirements
 if [ "${BUILD_MODE}" = sap ]; then
   curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/victoria-m3/upper-constraints.txt
-  sed -i 's/eventlet===0.26.1/eventlet===0.27.0/' /root/upper-constraints.txt
 else
   curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/victoria/upper-constraints.txt
 fi
