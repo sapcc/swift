@@ -5,7 +5,7 @@ set -euxo pipefail
 apt-get update
 apt-get dist-upgrade -y
 DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi6 libssl1.1 netcat procps lsof iproute2"
-MAKEDEPENDS="git build-essential python3-venv python3-dev liberasurecode-dev libffi-dev libssl-dev"
+MAKEDEPENDS="git build-essential liberasurecode-dev libffi-dev libssl-dev"
 apt-get install -y --no-install-recommends ${DEPENDS} ${MAKEDEPENDS}
 
 # create service user
