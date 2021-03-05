@@ -25,7 +25,7 @@ fi
 git -C /opt/swift fetch origin
 
 # setup virtualenv and install Swift there
-python3.6 -m venv /opt/venv/
+python3.7 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
