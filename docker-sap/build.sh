@@ -53,6 +53,11 @@ if [ "${BUILD_MODE}" = sap ]; then
     git+https://github.com/sapcc/openstack-watcher-middleware.git@1.0.33 \
     git+https://github.com/sapcc/openstack-rate-limit-middleware.git@1.1.0
 
+  # apply keystonemiddleware patch
+  (
+    cd /opt/venv/lib/python3.8/site-packages && patch -p0
+  ) < /opt/swift/docker-sap/keystonemiddleware-no-service-catalog-header.patch
+
   # startup logic and unmount helper
   install -D -m 0755 -t /usr/bin/ /opt/swift/docker-sap/bin/*
 fi
