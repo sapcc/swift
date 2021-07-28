@@ -252,6 +252,10 @@ class ObjectExpirer(Daemon):
                                             prefix=self.task_container_prefix):
             task_container = str(c['name'])
             timestamp = self.delete_at_time_of_task_container(task_container)
+            # TODO Remove this when the task containers have been cleaned up
+            #      There are soo big, that they slow down the expiry of others
+            if task_container in ['1620734512', '1620804692']:
+                break
             if timestamp > Timestamp.now():
                 break
             yield task_container
