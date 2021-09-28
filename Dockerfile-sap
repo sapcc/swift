@@ -1,5 +1,5 @@
 # build Go binaries in a separate container
-FROM golang:1.15-alpine AS builder
+FROM golang:1.17-alpine AS builder
 RUN apk add --no-cache git musl-dev gcc make
 RUN git clone https://github.com/sapcc/syslog-stdout && \
     make -C ./syslog-stdout install PREFIX=/pkg GO_LDFLAGS='-s -w -linkmode external -extldflags -static'
