@@ -67,7 +67,13 @@ function process_config {
             get_swift_configs account-server.conf internal-client.conf
             ;;
         container-sync)
-            get_swift_configs container-server.conf container-sync-internal-client.conf container-sync-realms.conf
+            get_swift_configs container-server.conf internal-client-no-cache.conf container-sync-realms.conf
+            ;;
+        container-reconciler)
+            get_swift_configs container-reconciler.conf
+            ;;
+        container-sharder)
+            get_swift_configs container-server.conf internal-client-no-cache.conf
             ;;
         container-*)
             get_swift_configs container-server.conf internal-client.conf
@@ -139,6 +145,11 @@ function _start_application {
             start_rsyslog
             bash /usr/bin/unmount-helper "${MARKER}" &
             run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/account-server.conf
+            ;;
+        container-reconciler)
+            start_rsyslog
+            bash /usr/bin/unmount-helper "${MARKER}" &
+            run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/container-reconciler.conf
             ;;
         container-*)
             start_rsyslog
