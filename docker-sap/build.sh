@@ -4,7 +4,7 @@ set -euxo pipefail
 # install dependencies
 apt-get update
 apt-get dist-upgrade -y
-DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi6 libssl1.1 netcat procps lsof iproute2"
+DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi7 libssl1.1 netcat procps lsof iproute2"
 MAKEDEPENDS="git build-essential liberasurecode-dev libffi-dev libssl-dev"
 apt-get install -y --no-install-recommends ${DEPENDS} ${MAKEDEPENDS}
 
@@ -25,7 +25,7 @@ fi
 git -C /opt/swift fetch origin
 
 # setup virtualenv and install Swift there
-python3.8 -m venv /opt/venv/
+python3.10 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
@@ -55,7 +55,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 
   # apply keystonemiddleware patch
   (
-    cd /opt/venv/lib/python3.8/site-packages && patch -p0
+    cd /opt/venv/lib/python3.10/site-packages && patch -p0
   ) < /opt/swift/docker-sap/keystonemiddleware-no-service-catalog-header.patch
 
   # startup logic and unmount helper
