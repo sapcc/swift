@@ -156,22 +156,22 @@
       python_version: 3.8
 
 - job:
-    name: swift-tox-func-py36-centos-8-stream
+    name: swift-tox-func-py39-centos-9-stream
     parent: swift-tox-func-py38
-    nodeset: centos-8-stream
+    nodeset: centos-9-stream
     vars:
-      bindep_profile: test py36
-      python_version: 3.6
+      bindep_profile: test py39
+      python_version: 3.9
 
 - job:
-    name: swift-tox-func-encryption-py36-centos-8-stream
-    parent: swift-tox-func-py36-centos-8-stream
+    name: swift-tox-func-encryption-py39-centos-9-stream
+    parent: swift-tox-func-py39-centos-9-stream
     vars:
       tox_envlist: func-encryption-py3
 
 - job:
-    name: swift-tox-func-ec-py36-centos-8-stream
-    parent: swift-tox-func-py36-centos-8-stream
+    name: swift-tox-func-ec-py39-centos-9-stream
+    parent: swift-tox-func-py39-centos-9-stream
     vars:
       tox_envlist: func-ec-py3
 
@@ -345,30 +345,36 @@
 
 - job:
     name: swift-probetests-centos-7
-    parent: unittests
+    parent: swift-probetests-centos-8-stream
     nodeset: centos-7
     description: |
       Setup a SAIO dev environment and run Swift's probe tests
       under Python 2.
-    timeout: 7200
     vars:
       bindep_profile: test py27
+      ensure_pip_from_packages: False
+      ensure_pip_from_packages_with_python2: False
+      ensure_pip_from_upstream: True
+      ensure_pip_from_upstream_interpreters:
+        - python2
+      ensure_pip_from_upstream_url: "https://bootstrap.pypa.io/pip/2.7/get-pip.py"
+
+- job:
+    name: swift-probetests-centos-8-stream
+    parent: unittests
+    nodeset: centos-8-stream
+    description: |
+      Setup a SAIO dev environment and run Swift's probe tests
+      under Python 3.
+    timeout: 7200
+    vars:
+      bindep_profile: test py36
     pre-run:
       - tools/playbooks/common/install_dependencies.yaml
       - tools/playbooks/saio_single_node_setup/setup_saio.yaml
       - tools/playbooks/saio_single_node_setup/make_rings.yaml
     run: tools/playbooks/probetests/run.yaml
     post-run: tools/playbooks/probetests/post.yaml
-
-- job:
-    name: swift-probetests-centos-8-stream
-    parent: swift-probetests-centos-7
-    nodeset: centos-8-stream
-    description: |
-      Setup a SAIO dev environment and run Swift's probe tests
-      under Python 3.
-    vars:
-      bindep_profile: test py36
 
 - job:
     name: swift-probetests-centos-8-stream-arm64
@@ -585,32 +591,32 @@
     vars: *swift_image_vars_py3
 
 - job:
-    name: swift-tox-func-py36-centos-8-stream-fips
-    parent: swift-tox-func-py36-centos-8-stream
+    name: swift-tox-func-py39-centos-9-stream-fips
+    parent: swift-tox-func-py39-centos-9-stream
     voting: false
     description: |
-      Functional testing on a FIPS enabled Centos 8 system
+      Functional testing on a FIPS enabled Centos 9 system
     vars:
       nslookup_target: 'opendev.org'
       enable_fips: true
 
 - job:
-    name: swift-tox-func-encryption-py36-centos-8-stream-fips
-    parent: swift-tox-func-encryption-py36-centos-8-stream
+    name: swift-tox-func-encryption-py39-centos-9-stream-fips
+    parent: swift-tox-func-encryption-py39-centos-9-stream
     voting: false
     description: |
       Functional encryption testing on a FIPS enabled
-      Centos 8 system
+      Centos 9 system
     vars:
       nslookup_target: 'opendev.org'
       enable_fips: true
 
 - job:
-    name: swift-tox-func-ec-py36-centos-8-stream-fips
-    parent: swift-tox-func-ec-py36-centos-8-stream
+    name: swift-tox-func-ec-py39-centos-9-stream-fips
+    parent: swift-tox-func-ec-py39-centos-9-stream
     voting: false
     description: |
-      Functional EC testing on a FIPS enabled Centos 8 system
+      Functional EC testing on a FIPS enabled Centos 9 system
     vars:
       nslookup_target: 'opendev.org'
       enable_fips: true
@@ -628,6 +634,8 @@
        - swift-tox-func-py38-arm64
 
 - project:
+    vars:
+      ensure_tox_version: '<4'
     templates:
       - publish-openstack-docs-pti
       - periodic-stable-jobs
@@ -637,14 +645,14 @@
       - swift-jobs-arm64
     check:
       jobs:
-        - swift-tox-func-py36-centos-8-stream-fips:
+        - swift-tox-func-py39-centos-9-stream-fips:
             irrelevant-files: &functest-irrelevant-files
               - ^(api-ref|doc|releasenotes)/.*$
               - ^test/(cors|probe|s3api)/.*$
               - ^(.gitreview|.mailmap|AUTHORS|CHANGELOG|.*\.rst)$
-        - swift-tox-func-encryption-py36-centos-8-stream-fips:
+        - swift-tox-func-encryption-py39-centos-9-stream-fips:
             irrelevant-files: *functest-irrelevant-files
-        - swift-tox-func-ec-py36-centos-8-stream-fips:
+        - swift-tox-func-ec-py39-centos-9-stream-fips:
             irrelevant-files: *functest-irrelevant-files
         - swift-build-image:
             irrelevant-files: &docker-irrelevant-files
@@ -724,6 +732,7 @@
               - ^doc/(requirements.txt|(saio|s3api|source)/.*)$
         - swift-multinode-rolling-upgrade:
             irrelevant-files: *functest-irrelevant-files
+            voting: false
         - tempest-integrated-object-storage:
             irrelevant-files: &tempest-irrelevant-files
               - ^(api-ref|doc|releasenotes)/.*$
@@ -766,8 +775,6 @@
             irrelevant-files: *unittest-irrelevant-files
         - openstack-tox-pep8:
             irrelevant-files: *pep8-irrelevant-files
-        - swift-multinode-rolling-upgrade:
-            irrelevant-files: *functest-irrelevant-files
         - tempest-integrated-object-storage:
             irrelevant-files: *tempest-irrelevant-files
         - tempest-ipv6-only:
@@ -783,9 +790,9 @@
         - swift-tox-func-encryption-py27-centos-7
         - swift-tox-func-ec-py27-centos-7
         - swift-tox-py36-centos-8-stream
-        - swift-tox-func-py36-centos-8-stream
-        - swift-tox-func-encryption-py36-centos-8-stream
-        - swift-tox-func-ec-py36-centos-8-stream
+        - swift-tox-func-py39-centos-9-stream
+        - swift-tox-func-encryption-py39-centos-9-stream
+        - swift-tox-func-ec-py39-centos-9-stream
         - swift-multinode-rolling-upgrade-rocky
         - swift-multinode-rolling-upgrade-stein
         - swift-multinode-rolling-upgrade-train
