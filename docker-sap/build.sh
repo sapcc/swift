@@ -15,9 +15,17 @@ install -d -m 0755 -o swift -g swift /etc/swift /var/log/swift /var/lib/swift /v
 
 # fetch upper-constraints.txt from openstack/requirements
 if [ "${BUILD_MODE}" = sap ]; then
-  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/2023.1-m3/upper-constraints.txt
+  # Atm there are only upper-constraints from the previous release:
+  #   https://github.com/openstack/requirements/compare/stable/zed...sapcc:requirements:stable/zed-m3
+  # The only possible relevant change is in keystonemiddleware:
+  # - https://github.com/openstack/keystonemiddleware/compare/stable/zed...sapcc:keystonemiddleware:stable/zed-m3
+  # - The severity of a log message was decreased from ERROR to INFO because of Sentry
+  # - Swift does not use Sentry
+  # Because there are no relevant sapcc upper-constraints for Swift, we choose the upstream upper-constraints
+  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/openstack/requirements/stable/2023.1/upper-constraints.txt
+  #curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/2023.1-m3/upper-constraints.txt
 else
-  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/2023.1/upper-constraints.txt
+  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/openstack/requirements/stable/2023.1/upper-constraints.txt
 fi
 
 # fetching origin to get an up to date tag list
