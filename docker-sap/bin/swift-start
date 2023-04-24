@@ -19,6 +19,9 @@ mkdir -p /swift-drive-state/service-startup-time
 MARKER="/swift-drive-state/service-startup-time/$1"
 touch "${MARKER}"
 
+# /var/run not accesible for user swift
+PID_FILE=/tmp/${COMPONENT_NAME}.pid
+
 # on Ubuntu, python does not recognize the system certificate bundle
 export OS_CACERT=/etc/ssl/certs/ca-certificates.crt
 export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
@@ -120,9 +123,35 @@ function every {
     done
 }
 
+mkdir -p /tmp/etc/swift
+# function to detect ring changes and reload server processes
+function check_for_ring_update {
+    RING="$1"
+    ( while true; do
+        sleep 30
+
+        # decode binary rings
+        base64 -d /swift-rings/${RING}/ring.b64 > /tmp/etc/swift/${RING}.ring.gz
+
+        # TODO do some size checks
+
+        # only reload if rings have changed
+        if diff -q /tmp/etc/swift/${RING}.ring.gz /etc/swift/${RING}.ring.gz; then
+            : # nothing to do
+        else
+            process_config
+            echo "$(date): ring watch: reload-seamless ${COMPONENT_NAME}"
+            # TODO Safety measure if PID file is not existent
+            kill -USR1 $(cat ${PID_FILE})
+            break
+        fi
+    done ) &
+}
+
 # function to run a process under the Swift user/group
 function run_as_swift {
-    sudo -u swift -g swift --preserve-env "$@"
+    args="$@"
+    sudo -u swift -g swift --preserve-env sh -c "echo \$\$ > ${PID_FILE}; exec $args"
 }
 
 # we need to find where Swift is installed in our $PATH, because the $PATH variable is reset by sudo(1)
@@ -132,6 +161,9 @@ function _start_application {
     case "$COMPONENT_NAME" in
         proxy-server)
             start_rsyslog
+            check_for_ring_update account
+            check_for_ring_update container
+            check_for_ring_update object
             run_as_swift "${SWIFT_BIN_PATH}/swift-proxy-server" /etc/swift/proxy-server.conf
             ;;
         account-caretaker-collect)
@@ -140,6 +172,12 @@ function _start_application {
             ;;
         account-caretaker-mergify)
             every ${RUN_INTERVAL:-86400} "${SWIFT_BIN_PATH}/swift-account-caretaker" -c /caretaker-etc/config.yaml -l info mergify --history=30
+            ;;
+        account-server)
+            start_rsyslog
+            bash /usr/bin/unmount-helper "${MARKER}" &
+            check_for_ring_update account
+            run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/account-server.conf
             ;;
         account-*)
             start_rsyslog
@@ -151,6 +189,12 @@ function _start_application {
             bash /usr/bin/unmount-helper "${MARKER}" &
             run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/container-reconciler.conf
             ;;
+        container-server)
+            start_rsyslog
+            bash /usr/bin/unmount-helper "${MARKER}" &
+            check_for_ring_update container
+            run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/container-server.conf
+            ;;
         container-*)
             start_rsyslog
             bash /usr/bin/unmount-helper "${MARKER}" &
@@ -159,6 +203,12 @@ function _start_application {
         object-expirer)
             start_rsyslog
             run_as_swift "${SWIFT_BIN_PATH}/swift-object-expirer" /etc/swift/object-expirer.conf
+            ;;
+        object-server)
+            start_rsyslog
+            bash /usr/bin/unmount-helper "${MARKER}" &
+            check_for_ring_update object
+            run_as_swift "${SWIFT_BIN_PATH}/swift-${COMPONENT_NAME}" /etc/swift/object-server.conf
             ;;
         object-*)
             start_rsyslog
