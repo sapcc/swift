@@ -30,7 +30,7 @@ unset http_proxy https_proxy no_proxy
 # password from the exported environment variable.
 # Acceptable value: { fromEnv: ENV_VAR }
 function get_passwords_from_env {
-	perl -npE 's/{\s*fromEnv:\s*(\w+)\s*}/$ENV{$1}/' -i "${1}"
+    perl -npE 's/{\s*fromEnv:\s*(\w+)\s*}/$ENV{$1}/' -i "${1}"
 }
 
 # function to copy shared configuration
@@ -48,10 +48,24 @@ function get_swift_configs {
         chown swift:swift /etc/swift/${file}
     done
 
-    # decode binary rings
-    base64 -d /swift-rings/account/ring.b64 > /etc/swift/account.ring.gz
-    base64 -d /swift-rings/container/ring.b64 > /etc/swift/container.ring.gz
-    base64 -d /swift-rings/object/ring.b64 > /etc/swift/object.ring.gz
+    # new setup (then-branches): copy binary rings from emptyDir volume filled by init container
+    # old setup (else-branches): unpack binary rings from configMap volume
+    # TODO: Remove the else-branches once all deployments are upgraded to the new setup.
+    if [ -r /swift-rings/account.ring.gz ]; then
+        cat < /swift-rings/account.ring.gz > /etc/swift/account.ring.gz
+    else
+        base64 -d /swift-rings/account/ring.b64 > /etc/swift/account.ring.gz
+    fi
+    if [ -r /swift-rings/container.ring.gz ]; then
+        cat < /swift-rings/container.ring.gz > /etc/swift/container.ring.gz
+    else
+        base64 -d /swift-rings/container/ring.b64 > /etc/swift/container.ring.gz
+    fi
+    if [ -r /swift-rings/object.ring.gz ]; then
+        cat < /swift-rings/object.ring.gz > /etc/swift/object.ring.gz
+    else
+        base64 -d /swift-rings/object/ring.b64 > /etc/swift/object.ring.gz
+    fi
 
     chown swift:swift /etc/swift/*.ring.gz
 }
