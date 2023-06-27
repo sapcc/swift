@@ -13,6 +13,7 @@ groupadd -g 1000 swift
 useradd -u 1000 -g swift -M -d /var/lib/swift -s /usr/sbin/nologin -c "swift user" swift
 install -d -m 0755 -o swift -g swift /etc/swift /var/log/swift /var/lib/swift /var/cache/swift
 
+RELEASE="2023.1"
 # fetch upper-constraints.txt from openstack/requirements
 if [ "${BUILD_MODE}" = sap ]; then
   # Atm there are only upper-constraints from the previous release:
@@ -22,10 +23,35 @@ if [ "${BUILD_MODE}" = sap ]; then
   # - The severity of a log message was decreased from ERROR to INFO because of Sentry
   # - Swift does not use Sentry
   # Because there are no relevant sapcc upper-constraints for Swift, we choose the upstream upper-constraints
-  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/openstack/requirements/stable/2023.1/upper-constraints.txt
-  #curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/2023.1-m3/upper-constraints.txt
+  #curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/sapcc/requirements/stable/${RELEASE}-m3/upper-constraints.txt
+
+  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/openstack/requirements/stable/${RELEASE}/upper-constraints.txt
+
+  #########################
+  # vulnerability patches #
+  #########################
+  # Check for vulnerability in https://dashboard.eu-de-1.cloud.sap/ccadmin/master/keppel/#/repo/ccloud/swift and tag ${RELEASE}-latest
+  # and update upper-constraints accordingly
+  #
+  # https://avd.aquasec.com/nvd/cve-2023-0286
+  # https://github.com/advisories/GHSA-39hc-v87j-747x
+  # https://avd.aquasec.com/nvd/cve-2023-23931
+  sed -i '/cryptography===/c\cryptography===39.0.1' /root/upper-constraints.txt
+
+  # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
+  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.1.1' /root/upper-constraints.txt
+
+  # https://avd.aquasec.com/nvd/cve-2023-32681
+  sed -i '/requests===/c\requests===2.31.0' /root/upper-constraints.txt
+
+  # https://avd.aquasec.com/nvd/cve-2023-28859
+  sed -i '/redis===/c\redis===4.4.4' /root/upper-constraints.txt
+
+  #############################
+  # end vulnerability patches #
+  #############################
 else
-  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/openstack/requirements/stable/2023.1/upper-constraints.txt
+  curl -L -o /root/upper-constraints.txt https://raw.githubusercontent.com/openstack/requirements/stable/${RELEASE}/upper-constraints.txt
 fi
 
 # fetching origin to get an up to date tag list
