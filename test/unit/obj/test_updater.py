@@ -733,9 +733,9 @@ class TestObjectUpdater(unittest.TestCase):
                 self.assertEqual(method, op)
                 self.assertEqual(headers['X-Backend-Storage-Policy-Index'],
                                  str(int(policy)))
-            self.assertEqual(
-                daemon.logger.statsd_client.get_increment_counts(),
-                {'successes': 1, 'unlinks': 1, 'async_pendings': 1})
+            self.assertEqual(daemon.logger.get_increment_counts(),
+                             {'successes': 1, 'unlinks': 1,
+                              'async_pendings': 1, 'async_pendings.a.c': 1})
 
     def _write_async_update(self, dfmanager, timestamp, policy,
                             headers=None, container_path=None):
@@ -796,8 +796,9 @@ class TestObjectUpdater(unittest.TestCase):
                 self.assertEqual(method, 'PUT')
                 self.assertDictEqual(expected, headers)
             self.assertEqual(
-                daemon.logger.statsd_client.get_increment_counts(),
-                {'successes': 1, 'unlinks': 1, 'async_pendings': 1})
+                daemon.logger.get_increment_counts(),
+                {'successes': 1, 'unlinks': 1, 'async_pendings': 1,
+                 'async_pendings.a.c': 1})
             self.assertFalse(os.listdir(async_dir))
             daemon.logger.clear()
 
@@ -912,8 +913,8 @@ class TestObjectUpdater(unittest.TestCase):
                          [req['path'] for req in conn.requests])
         self.assertEqual(
             {'redirects': 1, 'successes': 1,
-             'unlinks': 1, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+             'unlinks': 1, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         self.assertFalse(os.listdir(async_dir))  # no async file
 
     def test_obj_put_async_root_update_redirected_previous_success(self):
@@ -944,8 +945,8 @@ class TestObjectUpdater(unittest.TestCase):
         self.assertEqual(['/sda1/0/a/c/o'] * 3,
                          [req['path'] for req in conn.requests])
         self.assertEqual(
-            {'failures': 1, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+            {'failures': 1, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         async_path, async_data = self._check_async_file(async_dir)
         self.assertEqual(dict(orig_async_data, successes=[1]), async_data)
 
@@ -972,8 +973,8 @@ class TestObjectUpdater(unittest.TestCase):
             [req['path'] for req in conn.requests])
         self.assertEqual(
             {'redirects': 1, 'successes': 1, 'failures': 1, 'unlinks': 1,
-             'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+             'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         self.assertFalse(os.listdir(async_dir))  # no async file
 
     def _check_async_file(self, async_dir):
@@ -1020,8 +1021,8 @@ class TestObjectUpdater(unittest.TestCase):
         self.assertEqual(['/sda1/0/a/c/o'] * 3,
                          [req['path'] for req in conn.requests])
         self.assertEqual(
-            {'failures': 1, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+            {'failures': 1, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         # async file still intact
         async_path, async_data = self._check_async_file(async_dir)
         self.assertEqual(orig_async_path, async_path)
@@ -1099,8 +1100,8 @@ class TestObjectUpdater(unittest.TestCase):
             ['/sda1/%s/.shards_a/c_shard_new/o' % new_part] * 3,
             [req['path'] for req in conn.requests])
         self.assertEqual(
-            {'redirects': 2, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+            {'redirects': 2, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         # update failed, we still have pending file with most recent redirect
         # response Location header value added to data
         async_path, async_data = self._check_async_file(async_dir)
@@ -1125,8 +1126,8 @@ class TestObjectUpdater(unittest.TestCase):
             [req['path'] for req in conn.requests])
         self.assertEqual(
             {'redirects': 2, 'successes': 1, 'unlinks': 1,
-             'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+             'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         self.assertFalse(os.listdir(async_dir))  # no async file
 
     def test_obj_put_async_update_redirection_loop(self):
@@ -1173,8 +1174,8 @@ class TestObjectUpdater(unittest.TestCase):
                          ['/sda1/%s/.shards_a/c_shard_1/o' % shard_1_part] * 3,
                          [req['path'] for req in conn.requests])
         self.assertEqual(
-            {'redirects': 2, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+            {'redirects': 2, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         # update failed, we still have pending file with most recent redirect
         # response Location header value added to data
         async_path, async_data = self._check_async_file(async_dir)
@@ -1205,8 +1206,8 @@ class TestObjectUpdater(unittest.TestCase):
             ['/sda1/%s/a/c/o' % root_part] * 3,
             [req['path'] for req in conn.requests])
         self.assertEqual(
-            {'redirects': 4, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+            {'redirects': 4, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         # update failed, we still have pending file with most recent redirect
         # response Location header value from root added to persisted data
         async_path, async_data = self._check_async_file(async_dir)
@@ -1235,8 +1236,8 @@ class TestObjectUpdater(unittest.TestCase):
             ['/sda1/%s/.shards_a/c_shard_1/o' % shard_1_part] * 3,
             [req['path'] for req in conn.requests])
         self.assertEqual(
-            {'redirects': 6, 'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+            {'redirects': 6, 'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         # update failed, we still have pending file, but container_path is None
         # because most recent redirect location was a repeat
         async_path, async_data = self._check_async_file(async_dir)
@@ -1259,8 +1260,8 @@ class TestObjectUpdater(unittest.TestCase):
                          [req['path'] for req in conn.requests])
         self.assertEqual(
             {'redirects': 6, 'successes': 1, 'unlinks': 1,
-             'async_pendings': 1},
-            daemon.logger.statsd_client.get_increment_counts())
+             'async_pendings': 1, 'async_pendings.a.c': 1},
+            daemon.logger.get_increment_counts())
         self.assertFalse(os.listdir(async_dir))  # no async file
 
     def test_obj_update_quarantine(self):
