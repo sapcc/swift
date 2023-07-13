@@ -36,7 +36,7 @@ if [ "${BUILD_MODE}" = sap ]; then
   # https://avd.aquasec.com/nvd/cve-2023-0286
   # https://github.com/advisories/GHSA-39hc-v87j-747x
   # https://avd.aquasec.com/nvd/cve-2023-23931
-  sed -i '/cryptography===/c\cryptography===39.0.1' /root/upper-constraints.txt
+  sed -i '/cryptography===/c\cryptography===41.0.0' /root/upper-constraints.txt
 
   # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
   sed -i '/pyOpenSSL===/c\pyOpenSSL===23.1.1' /root/upper-constraints.txt
