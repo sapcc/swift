@@ -39,7 +39,7 @@ if [ "${BUILD_MODE}" = sap ]; then
   sed -i '/cryptography===/c\cryptography===41.0.0' /root/upper-constraints.txt
 
   # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
-  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.1.1' /root/upper-constraints.txt
+  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.2.0' /root/upper-constraints.txt
 
   # https://avd.aquasec.com/nvd/cve-2023-32681
   sed -i '/requests===/c\requests===2.31.0' /root/upper-constraints.txt
