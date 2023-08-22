@@ -1,5 +1,5 @@
 # build Go binaries in a separate container
-FROM golang:1.20.2-alpine3.17 AS builder
+FROM golang:1.21-alpine3.18 AS builder
 RUN apk add --no-cache git musl-dev gcc make
 # GO_LDFLAGS='-s -w' not needed here, already in the respective Makefiles
 # GO_BUILDFLAGS='-mod vendor' not needed here, already in the respective Makefiles
