@@ -31,6 +31,9 @@ if [ "${BUILD_MODE}" = sap ]; then
 #  #########################
 #  # vulnerability patches #
 #  #########################
+# PIP
+# https://avd.aquasec.com/nvd/cve-2023-5752
+  pip install --upgrade pip
 #  # Check for vulnerability in https://dashboard.eu-de-1.cloud.sap/ccadmin/master/keppel/#/repo/ccloud/swift and tag ${RELEASE}-latest
 #  # and update upper-constraints accordingly
 #  #
@@ -38,7 +41,8 @@ if [ "${BUILD_MODE}" = sap ]; then
 #  # https://github.com/advisories/GHSA-39hc-v87j-747x
 #  # https://avd.aquasec.com/nvd/cve-2023-23931
 #  # https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
-#  sed -i '/cryptography===/c\cryptography===41.0.0' /root/upper-constraints.txt
+#  https://avd.aquasec.com/nvd/cve-2024-26130
+  sed -i '/cryptography===/c\cryptography===42.0.4' /root/upper-constraints.txt
 #
 #  # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
 #  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.2.0' /root/upper-constraints.txt
@@ -49,6 +53,9 @@ if [ "${BUILD_MODE}" = sap ]; then
 #  # https://avd.aquasec.com/nvd/cve-2023-28859
 #  sed -i '/redis===/c\redis===4.4.4' /root/upper-constraints.txt
 #
+# urllib3 patch
+# https://avd.aquasec.com/nvd/cve-2023-43804
+  sed -i '/urllib3===/c\urllib3===1.26.18' /root/upper-constraints.txt
 #  #############################
 #  # end vulnerability patches #
 #  #############################
