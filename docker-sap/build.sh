@@ -13,7 +13,7 @@ groupadd -g 1000 swift
 useradd -u 1000 -g swift -M -d /var/lib/swift -s /usr/sbin/nologin -c "swift user" swift
 install -d -m 0755 -o swift -g swift /etc/swift /var/log/swift /var/lib/swift /var/cache/swift
 
-RELEASE="2023.1"
+RELEASE="2023.2"
 # fetch upper-constraints.txt from openstack/requirements
 if [ "${BUILD_MODE}" = sap ]; then
   # Atm there are only upper-constraints from the previous release:
