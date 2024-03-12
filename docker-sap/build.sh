@@ -70,7 +70,7 @@ fi
 git -C /opt/swift fetch origin
 
 # setup virtualenv and install Swift there
-python3.10 -m venv /opt/venv/
+python3.11 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
@@ -100,7 +100,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 
   # apply keystonemiddleware patch
   (
-    cd /opt/venv/lib/python3.10/site-packages && patch -p0
+    cd /opt/venv/lib/python3.11/site-packages && patch -p0
   ) < /opt/swift/docker-sap/keystonemiddleware-no-service-catalog-header.patch
 
   # startup logic and unmount helper
