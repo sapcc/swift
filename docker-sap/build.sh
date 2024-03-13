@@ -37,7 +37,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 #
 #  jinja2 security patch update
 #  CVE-2024-22195
-  pip install -U Jinja2
+  pip install -U Jinja2==3.1.3
 #  # Check for vulnerability in https://dashboard.eu-de-1.cloud.sap/ccadmin/master/keppel/#/repo/ccloud/swift and tag ${RELEASE}-latest
 #  # and update upper-constraints accordingly
 #  #
