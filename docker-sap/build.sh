@@ -34,6 +34,10 @@ if [ "${BUILD_MODE}" = sap ]; then
 # PIP
 # https://avd.aquasec.com/nvd/cve-2023-5752
   pip install --upgrade pip
+#
+#  jinja2 security patch update
+#  CVE-2024-22195
+  pip install -U Jinja2
 #  # Check for vulnerability in https://dashboard.eu-de-1.cloud.sap/ccadmin/master/keppel/#/repo/ccloud/swift and tag ${RELEASE}-latest
 #  # and update upper-constraints accordingly
 #  #
@@ -43,8 +47,8 @@ if [ "${BUILD_MODE}" = sap ]; then
 #  # https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
 #  https://avd.aquasec.com/nvd/cve-2024-26130
 # pyOpenSSL version need to change to support latest cryptography
-  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.3.0' /root/upper-constraints.txt
-  sed -i '/cryptography===/c\cryptography===41.0.7' /root/upper-constraints.txt
+  sed -i '/pyOpenSSL===/c\pyOpenSSL===24.1.0' /root/upper-constraints.txt
+  sed -i '/cryptography===/c\cryptography===42.0.4' /root/upper-constraints.txt
 #
 #  # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
 #  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.2.0' /root/upper-constraints.txt
@@ -58,6 +62,10 @@ if [ "${BUILD_MODE}" = sap ]; then
 # urllib3 patch
 # https://avd.aquasec.com/nvd/cve-2023-43804
   sed -i '/urllib3===/c\urllib3===1.26.18' /root/upper-constraints.txt
+#
+#  requests security patch update
+#  CVE-2023-32681
+  sed -i '/requests===/c\requests===2.31.0' /root/upper-constraints.txt
 #  #############################
 #  # end vulnerability patches #
 #  #############################
