@@ -82,8 +82,10 @@ class FakeStatsdClient(utils.StatsdClient):
         # note: this method reports the sum of stats sent via the increment
         # method only; consider using get_stats_counts instead to get the sum
         # of stats sent via both the increment and update_stats methods
-        counts = defaultdict(int)
+        counts = {}
         for metric in self.get_increments():
+            if metric not in counts:
+                counts[metric] = 0
             counts[metric] += 1
         return counts
 
@@ -91,8 +93,10 @@ class FakeStatsdClient(utils.StatsdClient):
         return [call[0][:2] for call in self.calls['update_stats']]
 
     def get_stats_counts(self):
-        counts = defaultdict(int)
+        counts = self.get_increment_counts()
         for metric, step in self.get_update_stats():
+            if metric not in counts:
+                counts[metric] = 0
             counts[metric] += step
         return counts
 
