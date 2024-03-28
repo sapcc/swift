@@ -193,10 +193,54 @@ class FakeLogger(logging.Logger, CaptureLog):
             captured['exc_info'] = sys.exc_info()
         self.log_dict[store_name].append((tuple(cargs), captured))
         super(FakeLogger, self)._log(level, msg, *args, **kwargs)
+    
+    def _store_in(store_name):
+        def stub_fn(self, *args, **kwargs):
+            self.log_dict[store_name].append((args, kwargs))
+        return stub_fn
 
+    # mock out the StatsD logging methods:
+    update_stats = _store_in('update_stats')
+    increment = _store_in('increment')
+    decrement = _store_in('decrement')
+    timing = _store_in('timing')
+    timing_since = _store_in('timing_since')
+    transfer_rate = _store_in('transfer_rate')
+    set_statsd_prefix = _store_in('set_statsd_prefix')
+
+    def get_increments(self):
+        return [call[0][0] for call in self.log_dict['increment']]
+
+    def get_increment_counts(self):
+        # note: this method reports the sum of stats sent via the increment
+        # method only; consider using get_stats_counts instead to get the sum
+        # of stats sent via both the increment and update_stats methods
+        counts = {}
+        for metric in self.get_increments():
+            if metric not in counts:
+                counts[metric] = 0
+            counts[metric] += 1
+        return counts
+
+    def get_update_stats(self):
+        return [call[0] for call in self.log_dict['update_stats']]
+
+    def get_stats_counts(self):
+        # return dict key->count for stats, aggregating calls to both the
+        # increment and update methods
+        counts = self.get_increment_counts()
+        for metric, step in self.get_update_stats():
+            if metric not in counts:
+                counts[metric] = 0
+            counts[metric] += step
+        return counts
+    
     def setFormatter(self, obj):
         self.formatter = obj
-
+    
+    def close(self):
+        self._clear()
+    
     def set_name(self, name):
         # don't touch _handlers
         self._name = name
@@ -248,6 +292,20 @@ class DebugLogger(FakeLogger):
 
 class DebugLogAdapter(utils.LogAdapter):
 
+    def _send_to_logger(name):
+        def stub_fn(self, *args, **kwargs):
+            return getattr(self.logger, name)(*args, **kwargs)
+        return stub_fn
+
+    # delegate to FakeLogger's mocks
+    update_stats = _send_to_logger('update_stats')
+    increment = _send_to_logger('increment')
+    decrement = _send_to_logger('decrement')
+    timing = _send_to_logger('timing')
+    timing_since = _send_to_logger('timing_since')
+    transfer_rate = _send_to_logger('transfer_rate')
+    set_statsd_prefix = _send_to_logger('set_statsd_prefix')
+    
     def __getattribute__(self, name):
         try:
             return object.__getattribute__(self, name)
