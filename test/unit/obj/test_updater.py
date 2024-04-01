@@ -796,7 +796,7 @@ class TestObjectUpdater(unittest.TestCase):
                 self.assertEqual(method, 'PUT')
                 self.assertDictEqual(expected, headers)
             self.assertEqual(
-                daemon.logger.get_increment_counts(),
+                daemon.logger.statsd_client.get_increment_counts(),
                 {'successes': 1, 'unlinks': 1, 'async_pendings': 1,
                  'async_pendings.a.c': 1})
             self.assertFalse(os.listdir(async_dir))
@@ -1022,7 +1022,7 @@ class TestObjectUpdater(unittest.TestCase):
                          [req['path'] for req in conn.requests])
         self.assertEqual(
             {'failures': 1, 'async_pendings': 1, 'async_pendings.a.c': 1},
-            daemon.logger.statsd_client.statsd_client.get_increment_counts())
+            daemon.logger.statsd_client.get_increment_counts())
         # async file still intact
         async_path, async_data = self._check_async_file(async_dir)
         self.assertEqual(orig_async_path, async_path)
