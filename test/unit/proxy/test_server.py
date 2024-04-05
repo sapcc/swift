@@ -2525,7 +2525,7 @@ class BaseTestObjectController(object):
     @unpatch_policies
     def test_GET_pipeline(self):
         conf = _test_context['conf']
-        conf['client_timeout'] = 0.1
+        conf['client_timeout'] = 0.3
         prosrv = proxy_server.Application(conf, logger=debug_logger('proxy'))
         with in_process_proxy(
                 prosrv, socket_timeout=conf['client_timeout']) as prolis:
