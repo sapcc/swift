@@ -37,7 +37,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 #
 #  jinja2 security patch update
 #  CVE-2024-22195
-  sed -i '/Jinja2===/c\Jinja2===3.1.3' /root/upper-constraints.txt
+  sed -i '/Jinja2===/c\Jinja2===3.1.4' /root/upper-constraints.txt
 #  # Check for vulnerability in https://dashboard.eu-de-1.cloud.sap/ccadmin/master/keppel/#/repo/ccloud/swift and tag ${RELEASE}-latest
 #  # and update upper-constraints accordingly
 #  #
@@ -65,7 +65,12 @@ if [ "${BUILD_MODE}" = sap ]; then
 #
 #  requests security patch update
 #  CVE-2023-32681
-  sed -i '/requests===/c\requests===2.31.0' /root/upper-constraints.txt
+  sed -i '/requests===/c\requests===2.32.0' /root/upper-constraints.txt
+
+#
+# setuptools patch
+# CVE-2024-6345
+  rm -rf /usr/local/lib/python3.11/site-packages/setuptools*
 #  #############################
 #  # end vulnerability patches #
 #  #############################
