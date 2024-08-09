@@ -61,7 +61,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 #
 # urllib3 patch
 # https://avd.aquasec.com/nvd/cve-2023-43804
-  sed -i '/urllib3===/c\urllib3===1.26.18' /root/upper-constraints.txt
+  sed -i '/urllib3===/c\urllib3===1.26.19' /root/upper-constraints.txt
 #
 #  requests security patch update
 #  CVE-2023-32681
@@ -71,6 +71,23 @@ if [ "${BUILD_MODE}" = sap ]; then
 # setuptools patch
 # CVE-2024-6345
   rm -rf /usr/local/lib/python3.11/site-packages/setuptools*
+
+#
+# idna patch
+# CVE-2024-3651
+  sed -i '/idna===/c\idna===3.7' /root/upper-constraints.txt
+
+#
+# dnspython patch
+# CVE-2023-29483
+  sed -i '/dnspython===/c\dnspython===2.6.1' /root/upper-constraints.txt
+
+#
+# eventlet patch
+# CVE-2023-29483
+  sed -i '/eventlet===/c\eventlet===0.35.2' /root/upper-constraints.txt
+
+
 #  #############################
 #  # end vulnerability patches #
 #  #############################
