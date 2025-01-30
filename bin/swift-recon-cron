@@ -16,6 +16,8 @@
 swift-recon-cron.py
 """
 
+import os
+import time
 import sys
 
 from eventlet import Timeout
