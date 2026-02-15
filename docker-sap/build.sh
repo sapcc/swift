@@ -101,12 +101,12 @@ git -C /opt/swift fetch origin
 # setup virtualenv and install Swift there
 python3.11 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
-python3.11 -m pip install --upgrade pip setuptools wheel
+python3.11 -m pip install --upgrade pip 'setuptools<81' wheel
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
 }
 pip_install pip
-pip_install setuptools wheel
+pip_install 'setuptools<81' wheel
 pip_install --no-compile -c /root/upper-constraints.txt \
   /opt/swift/ \
   keystonemiddleware \
