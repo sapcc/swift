@@ -69,9 +69,7 @@ if [ "${BUILD_MODE}" = sap ]; then
   sed -i '/requests===/c\requests===2.32.4' /root/upper-constraints.txt
 
 #
-# setuptools patch
-# CVE-2024-6345
-  rm -rf /usr/local/lib/python3.11/site-packages/setuptools*
+
 
 #
 # idna patch
@@ -103,6 +101,7 @@ git -C /opt/swift fetch origin
 # setup virtualenv and install Swift there
 python3.11 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
+python3.11 -m pip install --upgrade pip setuptools wheel
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
 }
