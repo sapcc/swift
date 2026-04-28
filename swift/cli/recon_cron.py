@@ -23,7 +23,7 @@ from swift.common.recon import RECON_OBJECT_FILE, DEFAULT_RECON_CACHE_PATH
 from swift.obj.diskfile import ASYNCDIR_BASE
 
 
-def get_async_count(device_dir):
+def get_async_count(device_dir, logger=None):
     async_count = 0
     for i in listdir(device_dir):
         device = os.path.join(device_dir, i)
@@ -31,25 +31,29 @@ def get_async_count(device_dir):
             continue
         try:
             for asyncdir in os.listdir(device):
-                # skip stuff like "accounts", "containers", etc.
                 if not (asyncdir == ASYNCDIR_BASE or
                         asyncdir.startswith(ASYNCDIR_BASE + '-')):
                     continue
-                async_pending = os.path.join(device, asyncdir)
 
+                async_pending = os.path.join(device, asyncdir)
                 if os.path.isdir(async_pending):
                     for entry in os.listdir(async_pending):
-                        if os.path.isdir(os.path.join(async_pending, entry)):
-                            async_hdir = os.path.join(async_pending, entry)
-                            async_count += len(os.listdir(async_hdir))
+                        async_hdir = os.path.join(async_pending, entry)
+                        if os.path.isdir(async_hdir):
+                            try:
+                                async_count += len(os.listdir(async_hdir))
+                            except OSError as err:
+                                if logger:
+                                    logger.debug(
+                                        'Skipping async pending dir %s: %s' %
+                                        (async_hdir, err))
+                                continue
         except OSError as err:
-            # This usually happens when the drive is unmounted by
-            # swift-drive-autopilot because of a read error. In this case, it
-            # is okay to keep going and skip the broken drive since a broken
-            # drive is already reported by `swift-recon --unmounted`.
-            logger.error('Skipping %s because of read error: %s' % (device, str(err)))
+            if logger:
+                logger.error(
+                    'Skipping %s because of read error: %s' %
+                    (device, str(err)))
     return async_count
-
 
 def main():
     try:
@@ -68,7 +72,7 @@ def main():
     logger = get_logger(conf, log_route='recon-cron')
     try:
         with lock_path(lock_dir):
-            asyncs = get_async_count(device_dir)
+            asyncs = get_async_count(device_dir, logger)
             dump_recon_cache({
                 'async_pending': asyncs,
                 'async_pending_last': time.time(),
