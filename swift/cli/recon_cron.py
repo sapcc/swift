@@ -26,7 +26,6 @@ from swift.common.utils import get_logger, dump_recon_cache, readconf, \
     lock_path
 from swift.obj.diskfile import ASYNCDIR_BASE
 
-
 def get_async_count(device_dir, logger=None):
     async_count = 0
     for i in os.listdir(device_dir):
@@ -34,18 +33,7 @@ def get_async_count(device_dir, logger=None):
         if not os.path.isdir(device):
             continue
         try:
-            for asyncdir in os.listdir(device):
-                # skip stuff like "accounts", "containers", etc.
-                if not (asyncdir == ASYNCDIR_BASE or
-                        asyncdir.startswith(ASYNCDIR_BASE + '-')):
-                    continue
-                async_pending = os.path.join(device, asyncdir)
-
-                if os.path.isdir(async_pending):
-                    for entry in os.listdir(async_pending):
-                        async_hdir = os.path.join(async_pending, entry)
-                        if os.path.isdir(async_hdir):
-                            async_count += len(os.listdir(async_hdir))
+            asyncdirs = os.listdir(device)
         except OSError as err:
             # This usually happens when the drive is unmounted by
             # swift-drive-autopilot because of a read error. In this case, it
@@ -54,6 +42,28 @@ def get_async_count(device_dir, logger=None):
             if logger:
                 logger.error('Skipping %s because of read error: %s' %
                              (device, str(err)))
+            continue
+
+        for asyncdir in asyncdirs:
+            # skip stuff like "accounts", "containers", etc.
+            if not (asyncdir == ASYNCDIR_BASE or
+                    asyncdir.startswith(ASYNCDIR_BASE + '-')):
+                continue
+            async_pending = os.path.join(device, asyncdir)
+
+            if os.path.isdir(async_pending):
+                try:
+                    entries = os.listdir(async_pending)
+                except OSError:
+                    continue
+
+                for entry in entries:
+                    async_hdir = os.path.join(async_pending, entry)
+                    if os.path.isdir(async_hdir):
+                        try:
+                            async_count += len(os.listdir(async_hdir))
+                        except OSError:
+                            continue
     return async_count
 
 def main():
