@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,49 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+swift-recon-cron.py
+"""
+
 import os
-import sys
 import time
+import sys
 
 from eventlet import Timeout
 
 from swift.common.utils import get_logger, dump_recon_cache, readconf, \
-    lock_path, listdir
-from swift.common.recon import RECON_OBJECT_FILE, DEFAULT_RECON_CACHE_PATH
+    lock_path
 from swift.obj.diskfile import ASYNCDIR_BASE
 
 
-def get_async_count(device_dir, logger=None):
+def get_async_count(device_dir, logger):
     async_count = 0
-    for i in listdir(device_dir):
+    for i in os.listdir(device_dir):
         device = os.path.join(device_dir, i)
         if not os.path.isdir(device):
             continue
         try:
             for asyncdir in os.listdir(device):
+                # skip stuff like "accounts", "containers", etc.
                 if not (asyncdir == ASYNCDIR_BASE or
                         asyncdir.startswith(ASYNCDIR_BASE + '-')):
                     continue
-
                 async_pending = os.path.join(device, asyncdir)
+
                 if os.path.isdir(async_pending):
                     for entry in os.listdir(async_pending):
-                        async_hdir = os.path.join(async_pending, entry)
-                        if os.path.isdir(async_hdir):
-                            try:
-                                async_count += len(os.listdir(async_hdir))
-                            except OSError as err:
-                                if logger:
-                                    logger.debug(
-                                        'Skipping async pending dir %s: %s' %
-                                        (async_hdir, err))
-                                continue
+                        if os.path.isdir(os.path.join(async_pending, entry)):
+                            async_hdir = os.path.join(async_pending, entry)
+                            async_count += len(os.listdir(async_hdir))
         except OSError as err:
-            if logger:
-                logger.error(
-                    'Skipping %s because of read error: %s' %
-                    (device, str(err)))
+            # This usually happens when the drive is unmounted by
+            # swift-drive-autopilot because of a read error. In this case, it
+            # is okay to keep going and skip the broken drive since a broken
+            # drive is already reported by `swift-recon --unmounted`.
+            logger.error('Skipping %s because of read error: %s' % (device, str(err)))
     return async_count
+
 
 def main():
     try:
@@ -61,24 +61,24 @@ def main():
     except Exception:
         print("Usage: %s CONF_FILE" % sys.argv[0].split('/')[-1])
         print("ex: swift-recon-cron /etc/swift/object-server.conf")
-        return 1
+        sys.exit(1)
     conf = readconf(conf_path, 'filter:recon')
     device_dir = conf.get('devices', '/srv/node')
-    recon_cache_path = conf.get('recon_cache_path', DEFAULT_RECON_CACHE_PATH)
+    recon_cache_path = conf.get('recon_cache_path', '/var/cache/swift')
     recon_lock_path = conf.get('recon_lock_path', '/var/lock')
-    cache_file = os.path.join(recon_cache_path, RECON_OBJECT_FILE)
+    cache_file = os.path.join(recon_cache_path, "object.recon")
     lock_dir = os.path.join(recon_lock_path, "swift-recon-object-cron")
     conf['log_name'] = conf.get('log_name', 'recon-cron')
     logger = get_logger(conf, log_route='recon-cron')
     try:
         with lock_path(lock_dir):
             asyncs = get_async_count(device_dir, logger)
-            dump_recon_cache({
-                'async_pending': asyncs,
-                'async_pending_last': time.time(),
-            }, cache_file, logger)
+            dump_recon_cache({'async_pending': asyncs}, cache_file, logger)
     except (Exception, Timeout) as err:
         msg = 'Exception during recon-cron while accessing devices'
         logger.exception(msg)
         print('%s: %s' % (msg, err))
-        return 1
+        sys.exit(1)
+
+if __name__ == '__main__':
+    sys.exit(main())
