@@ -13,7 +13,7 @@ groupadd -g 1000 swift
 useradd -u 1000 -g swift -M -d /var/lib/swift -s /usr/sbin/nologin -c "swift user" swift
 install -d -m 0755 -o swift -g swift /etc/swift /var/log/swift /var/lib/swift /var/cache/swift
 
-RELEASE="2025.1"
+RELEASE="2025.2"
 # fetch upper-constraints.txt from openstack/requirements
 if [ "${BUILD_MODE}" = sap ]; then
   # Atm there are only upper-constraints from the previous release:
@@ -47,8 +47,11 @@ if [ "${BUILD_MODE}" = sap ]; then
 #  # https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
 #  https://avd.aquasec.com/nvd/cve-2024-26130
 # pyOpenSSL version need to change to support latest cryptography
-  sed -i '/pyOpenSSL===/c\pyOpenSSL===25.0.0' /root/upper-constraints.txt
-  sed -i '/cryptography===/c\cryptography===44.0.1' /root/upper-constraints.txt
+  sed -i '/pyOpenSSL===/c\pyOpenSSL===26.0.0' /root/upper-constraints.txt
+  sed -i '/msgpack===/c\msgpack===1.1.1' /root/upper-constraints.txt
+  sed -i '/lxml===/c\lxml===6.1.0' /root/upper-constraints.txt
+  sed -i '/PyJWT===/c\PyJWT===2.10.1' /root/upper-constraints.txt
+  sed -i '/cryptography===/c\cryptography===48.0.1' /root/upper-constraints.txt
 #
 #  # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
 #  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.2.0' /root/upper-constraints.txt
@@ -61,7 +64,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 #
 # urllib3 patch
 # https://avd.aquasec.com/nvd/cve-2023-43804
-  sed -i '/urllib3===/c\urllib3===2.5.0' /root/upper-constraints.txt
+  sed -i '/urllib3===/c\urllib3===2.7.0' /root/upper-constraints.txt
   sed -i '/WebOb===/c\WebOb===1.8.8' /root/upper-constraints.txt
 #
 #  requests security patch update
@@ -74,7 +77,7 @@ if [ "${BUILD_MODE}" = sap ]; then
 #
 # idna patch
 # CVE-2024-3651
-#  sed -i '/idna===/c\idna===3.7' /root/upper-constraints.txt
+sed -i '/idna===/c\idna===3.15' /root/upper-constraints.txt
 
 #
 # dnspython patch
