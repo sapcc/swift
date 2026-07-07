@@ -52,6 +52,7 @@ if [ "${BUILD_MODE}" = sap ]; then
   sed -i '/lxml===/c\lxml===6.1.0' /root/upper-constraints.txt
   sed -i '/PyJWT===/c\PyJWT===2.10.1' /root/upper-constraints.txt
   sed -i '/cryptography===/c\cryptography===48.0.1' /root/upper-constraints.txt
+  sed -i '/cffi===/c\cffi===2.0.0' /root/upper-constraints.txt
 #
 #  # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
 #  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.2.0' /root/upper-constraints.txt
