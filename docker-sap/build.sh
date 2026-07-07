@@ -110,7 +110,7 @@ pip_install() {
   pip --no-cache-dir install --upgrade "$@"
 }
 pip_install pip
-pip_install 'setuptools<81' wheel
+pip_install 'setuptools===78.1.1' 'wheel===0.46.2'
 pip_install --no-compile -c /root/upper-constraints.txt \
   /opt/swift/ \
   keystonemiddleware \
