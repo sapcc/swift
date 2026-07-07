@@ -23,7 +23,7 @@ from swift.common.recon import RECON_OBJECT_FILE, DEFAULT_RECON_CACHE_PATH
 from swift.obj.diskfile import ASYNCDIR_BASE
 
 
-def get_async_count(device_dir):
+def get_async_count(device_dir, logger):
     async_count = 0
     for i in listdir(device_dir):
         device = os.path.join(device_dir, i)
@@ -68,7 +68,7 @@ def main():
     logger = get_logger(conf, log_route='recon-cron')
     try:
         with lock_path(lock_dir):
-            asyncs = get_async_count(device_dir)
+            asyncs = get_async_count(device_dir, logger)
             dump_recon_cache({
                 'async_pending': asyncs,
                 'async_pending_last': time.time(),
