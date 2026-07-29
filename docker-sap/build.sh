@@ -47,11 +47,12 @@ if [ "${BUILD_MODE}" = sap ]; then
 #  # https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
 #  https://avd.aquasec.com/nvd/cve-2024-26130
 # pyOpenSSL version need to change to support latest cryptography
-  sed -i '/pyOpenSSL===/c\pyOpenSSL===26.0.0' /root/upper-constraints.txt
-  sed -i '/msgpack===/c\msgpack===1.1.1' /root/upper-constraints.txt
+  sed -i '/pyOpenSSL===/c\pyOpenSSL===26.2.0' /root/upper-constraints.txt
+  sed -i '/msgpack===/c\msgpack===1.2.1' /root/upper-constraints.txt
   sed -i '/lxml===/c\lxml===6.1.0' /root/upper-constraints.txt
-  sed -i '/PyJWT===/c\PyJWT===2.10.1' /root/upper-constraints.txt
+  sed -i '/PyJWT===/c\PyJWT===2.13.0' /root/upper-constraints.txt
   sed -i '/cryptography===/c\cryptography===48.0.1' /root/upper-constraints.txt
+  sed -i '/cffi===/c\cffi===2.0.0' /root/upper-constraints.txt
 #
 #  # pyopenssl 22.1.0 depends on cryptography<39 --> update pyopenssl
 #  sed -i '/pyOpenSSL===/c\pyOpenSSL===23.2.0' /root/upper-constraints.txt
@@ -104,12 +105,12 @@ git -C /opt/swift fetch origin
 # setup virtualenv and install Swift there
 python3.11 -m venv /opt/venv/
 set +ux; source /opt/venv/bin/activate; set -ux
-python3.11 -m pip install --upgrade pip 'setuptools<81' wheel
+python3.11 -m pip install --upgrade pip 'setuptools===78.1.1' 'wheel===0.46.2'
 pip_install() {
   pip --no-cache-dir install --upgrade "$@"
 }
 pip_install pip
-pip_install 'setuptools<81' wheel
+pip_install 'setuptools===78.1.1' 'wheel===0.46.2'
 pip_install --no-compile -c /root/upper-constraints.txt \
   /opt/swift/ \
   keystonemiddleware \
