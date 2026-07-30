@@ -577,14 +577,16 @@ def get_swift_logger(conf, name=None, log_to_console=False, log_route=None,
     get_swift_logger.handler4logger[logger] = handler
 
     # setup console logging
-    if log_to_console or hasattr(get_swift_logger, 'console_handler4logger'):
-        # remove pre-existing console handler for this logger
-        if not hasattr(get_swift_logger, 'console_handler4logger'):
-            get_swift_logger.console_handler4logger = {}
-        if logger in get_swift_logger.console_handler4logger:
-            logger.removeHandler(
-                get_swift_logger.console_handler4logger[logger])
+    if not hasattr(get_swift_logger, 'console_handler4logger'):
+        get_swift_logger.console_handler4logger = {}
 
+    # Remove any previously-installed console handler for this logger so
+    # repeated calls do not accumulate handlers or leave stale state.
+    if logger in get_swift_logger.console_handler4logger:
+        logger.removeHandler(get_swift_logger.console_handler4logger[logger])
+        del get_swift_logger.console_handler4logger[logger]
+
+    if log_to_console:
         console_handler = logging.StreamHandler(sys.__stderr__)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
