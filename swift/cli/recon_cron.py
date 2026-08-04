@@ -41,7 +41,11 @@ def get_async_count(device_dir, logger=None):
                     for entry in os.listdir(async_pending):
                         if os.path.isdir(os.path.join(async_pending, entry)):
                             async_hdir = os.path.join(async_pending, entry)
-                            async_count += len(os.listdir(async_hdir))
+                            try:
+                                async_count += len(os.listdir(async_hdir))
+                            except OSError:
+                                # Raced with async update cleanup.
+                                continue
         except OSError as err:
             # This usually happens when the drive is unmounted by
             # swift-drive-autopilot because of a read error. In this case, it

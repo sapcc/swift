@@ -547,6 +547,14 @@ def get_swift_logger(conf, name=None, log_to_console=False, log_route=None,
     if logger in get_swift_logger.handler4logger:
         logger.removeHandler(get_swift_logger.handler4logger[logger])
 
+    # Defensively clear stale non-syslog stream handlers. These may be left
+    # behind by previous logger setup in long-lived processes (or tests) and
+    # can change exception formatting and handler ordering in later calls.
+    for existing_handler in list(logger.handlers):
+        if (isinstance(existing_handler, logging.StreamHandler) and
+                not isinstance(existing_handler, SysLogHandler)):
+            logger.removeHandler(existing_handler)
+
     # facility for this logger will be set by last call wins
     facility = getattr(SysLogHandler, conf.get('log_facility', 'LOG_LOCAL0'),
                        SysLogHandler.LOG_LOCAL0)
