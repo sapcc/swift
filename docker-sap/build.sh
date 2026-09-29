@@ -3,7 +3,7 @@ set -euxo pipefail
 
 # install dependencies
 apt-get update
-# dist-upgrade with --fix-missing to handle deprecated security repos for Bullseye
+# dist-upgrade with --fix-missing to handle potential missing packages
 apt-get dist-upgrade -y --fix-missing || true
 DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi7 libssl1.1 netcat procps lsof iproute2"
 MAKEDEPENDS="git build-essential liberasurecode-dev libffi-dev libssl-dev"
