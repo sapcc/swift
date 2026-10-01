@@ -1,28 +1,60 @@
 # build Go binaries in a separate container
 FROM golang:1.27-alpine3.24 AS builder
+
 RUN apk add --no-cache git musl-dev gcc make
+
+# Copy the complete build context prepared by Concourse.
+# The addon repositories have already been fetched and authenticated by
+# Concourse and are available under /opt/swift/concourse-addons/.
+COPY . /opt/swift
+
+# Keep the same source directory names that the previous "git clone" commands
+# created. This keeps the Go build environment as close as possible to the
+# previous implementation while avoiding another GitHub checkout.
+RUN mv /opt/swift/concourse-addons/syslog-stdout /go/syslog-stdout && \
+    mv /opt/swift/concourse-addons/health-exporter /go/swift-health-exporter && \
+    mv /opt/swift/concourse-addons/s3-cache-prewarmer /go/swift-s3-cache-prewarmer && \
+    mv /opt/swift/concourse-addons/swift-ring-artisan /go/swift-ring-artisan
+
 # GO_LDFLAGS='-s -w' not needed here, already in the respective Makefiles
 # GO_BUILDFLAGS='-mod vendor' not needed here, already in the respective Makefiles
-RUN git clone https://github.com/sapcc/syslog-stdout && \
-    make -C ./syslog-stdout install PREFIX=/pkg GO_LDFLAGS='-linkmode external -extldflags -static'
-RUN git clone https://github.com/sapcc/swift-health-exporter && \
-    make -C ./swift-health-exporter install PREFIX=/pkg GO_LDFLAGS='-linkmode external -extldflags -static'
-RUN git clone https://github.com/sapcc/swift-s3-cache-prewarmer && \
-    make -C ./swift-s3-cache-prewarmer install PREFIX=/pkg GO_LDFLAGS='-linkmode external -extldflags -static'
-RUN git clone https://github.com/sapcc/swift-ring-artisan && \
-    make -C ./swift-ring-artisan install PREFIX=/pkg GO_LDFLAGS='-linkmode external -extldflags -static'
+
+RUN make -C /go/syslog-stdout install \
+    PREFIX=/pkg \
+    GO_LDFLAGS='-linkmode external -extldflags -static'
+
+RUN make -C /go/swift-health-exporter install \
+    PREFIX=/pkg \
+    GO_LDFLAGS='-linkmode external -extldflags -static'
+
+RUN make -C /go/swift-s3-cache-prewarmer install \
+    PREFIX=/pkg \
+    GO_LDFLAGS='-linkmode external -extldflags -static'
+
+RUN make -C /go/swift-ring-artisan install \
+    PREFIX=/pkg \
+    GO_LDFLAGS='-linkmode external -extldflags -static'
+
+# The remaining Concourse addon sources are not part of the runtime Swift
+# image. The four repositories above were already moved out for compilation.
+RUN rm -rf /opt/swift/concourse-addons
+
 
 ################################################################################
 
 FROM python:3.11.16-slim-bookworm
+
 LABEL source_repository="https://github.com/sapcc/swift"
 
 ENV PATH=/opt/venv/bin:$PATH
 
 COPY --from=builder /pkg/bin/* /usr/bin/
-COPY . /opt/swift
 
-# give --build-arg BUILD_MODE=sap to install components required by required by
+# Copy only the normal Swift source into the final image.
+# concourse-addons has already been removed in the builder stage.
+COPY --from=builder /opt/swift /opt/swift
+
+# give --build-arg BUILD_MODE=sap to install components required by
 # the Helm chart at https://github.com/sapcc/helm-charts/tree/master/openstack/swift
 ARG BUILD_MODE=normal
 
