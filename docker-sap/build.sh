@@ -4,7 +4,7 @@ set -euxo pipefail
 # install dependencies
 apt-get update
 apt-get dist-upgrade -y
-DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi7 libssl1.1 netcat procps lsof iproute2 rsyslog"
+DEPENDS="netbase ca-certificates curl sudo rsync gettext liberasurecode1 libffi8 libssl3 netcat-openbsd procps lsof iproute2 rsyslog"
 MAKEDEPENDS="git build-essential liberasurecode-dev libffi-dev libssl-dev"
 apt-get install -y --no-install-recommends ${DEPENDS} ${MAKEDEPENDS}
 
