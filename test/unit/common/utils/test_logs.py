@@ -963,18 +963,18 @@ class TestUtilsLogs(unittest.TestCase):
     def test_get_swift_logger_console(self):
         logger = get_swift_logger(None)
         console_handlers = [h for h in logger.logger.handlers if
-                            isinstance(h, logging.StreamHandler)]
+                            type(h) is logging.StreamHandler]
         self.assertFalse(console_handlers)
         logger = get_swift_logger(None, log_to_console=True)
         console_handlers = [h for h in logger.logger.handlers if
-                            isinstance(h, logging.StreamHandler)]
+                            type(h) is logging.StreamHandler]
         self.assertTrue(console_handlers)
         # make sure you can't have two console handlers
         self.assertEqual(len(console_handlers), 1)
         old_handler = console_handlers[0]
         logger = get_swift_logger(None, log_to_console=True)
         console_handlers = [h for h in logger.logger.handlers if
-                            isinstance(h, logging.StreamHandler)]
+                            type(h) is logging.StreamHandler]
         self.assertEqual(len(console_handlers), 1)
         new_handler = console_handlers[0]
         self.assertNotEqual(new_handler, old_handler)

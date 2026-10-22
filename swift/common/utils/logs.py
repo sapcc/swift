@@ -370,11 +370,8 @@ class SwiftLogFormatter(logging.Formatter):
             record.asctime = self.formatTime(record, self.datefmt)
         msg = (self._fmt % record.__dict__).replace('\n', '#012')
         if record.exc_info:
-            # Cache the traceback text to avoid converting it multiple times
-            # (it's constant anyway)
-            if not record.exc_text:
-                record.exc_text = self.formatException(
-                    record.exc_info).replace('\n', '#012')
+            record.exc_text = self.formatException(
+                record.exc_info).replace('\n', '#012')
         if record.exc_text:
             if not msg.endswith('#012'):
                 msg = msg + '#012'
@@ -546,14 +543,6 @@ def get_swift_logger(conf, name=None, log_to_console=False, log_route=None,
         get_swift_logger.handler4logger = {}
     if logger in get_swift_logger.handler4logger:
         logger.removeHandler(get_swift_logger.handler4logger[logger])
-
-    # Defensively clear stale non-syslog stream handlers. These may be left
-    # behind by previous logger setup in long-lived processes (or tests) and
-    # can change exception formatting and handler ordering in later calls.
-    for existing_handler in list(logger.handlers):
-        if (isinstance(existing_handler, logging.StreamHandler) and
-                not isinstance(existing_handler, SysLogHandler)):
-            logger.removeHandler(existing_handler)
 
     # facility for this logger will be set by last call wins
     facility = getattr(SysLogHandler, conf.get('log_facility', 'LOG_LOCAL0'),
