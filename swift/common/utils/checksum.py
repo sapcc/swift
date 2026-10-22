@@ -106,7 +106,7 @@ except OSError as e:
     if e.errno == errno.ENOENT:
         # could create socket, but crc32c is unknown
         _sock.close()
-    elif e.errno not in (errno.EAFNOSUPPORT, errno.EPERM):
+    elif e.errno != errno.EAFNOSUPPORT:
         raise
     crc32c_kern = None
 else:
