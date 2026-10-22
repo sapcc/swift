@@ -258,10 +258,11 @@ class TestProxyLogging(unittest.TestCase):
         self.assertEqual('proxy-access', log_adapter.name)
         self.assertEqual('bob', app.access_logger.server)
         self.assertEqual(logging.DEBUG, log_adapter.logger.level)
-        self.assertEqual(('example.com', 3456),
-                         log_adapter.logger.handlers[0].address)
-        self.assertEqual(SysLogHandler.LOG_LOCAL7,
-                         log_adapter.logger.handlers[0].facility)
+        syslog_handler = next(
+            h for h in log_adapter.logger.handlers
+            if isinstance(h, SysLogHandler))
+        self.assertEqual(('example.com', 3456), syslog_handler.address)
+        self.assertEqual(SysLogHandler.LOG_LOCAL7, syslog_handler.facility)
 
         statsd_client = app.access_logger.logger.statsd_client
         self.assertIsInstance(statsd_client, FakeStatsdClient)
@@ -311,10 +312,11 @@ class TestProxyLogging(unittest.TestCase):
         self.assertEqual('my-proxy-access', log_adapter.name)
         self.assertEqual('alice', app.access_logger.server)
         self.assertEqual(logging.WARN, log_adapter.logger.level)
-        self.assertEqual(('access.com', 6789),
-                         log_adapter.logger.handlers[0].address)
-        self.assertEqual(SysLogHandler.LOG_LOCAL6,
-                         log_adapter.logger.handlers[0].facility)
+        syslog_handler = next(
+            h for h in log_adapter.logger.handlers
+            if isinstance(h, SysLogHandler))
+        self.assertEqual(('access.com', 6789), syslog_handler.address)
+        self.assertEqual(SysLogHandler.LOG_LOCAL6, syslog_handler.facility)
 
         statsd_client = app.access_logger.logger.statsd_client
         self.assertIsInstance(statsd_client, FakeStatsdClient)
